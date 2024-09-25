@@ -39,7 +39,8 @@
 
 #include "device/usbd.h"
 #include "device/usbd_pvt.h"
-
+//ps
+#include "class/video/video_device.h"
 //--------------------------------------------------------------------+
 // USBD Configuration
 //--------------------------------------------------------------------+
@@ -209,6 +210,19 @@ tu_static usbd_class_driver_t const _usbd_driver[] = {
         .open             = videod_open,
         .control_xfer_cb  = videod_control_xfer_cb,
         .xfer_cb          = videod_xfer_cb,
+        .sof              = NULL
+    },
+    #endif
+
+    #if CFG_TUD_AUDIO
+    {
+        .name             = DRIVER_NAME("AUDIO"),
+        .init             = audiod_init,
+        .deinit           = audiod_deinit,
+        .reset            = audiod_reset,
+        .open             = audiod_open,
+        .control_xfer_cb  = audiod_control_xfer_cb,
+        .xfer_cb          = audiod_xfer_cb,
         .sof              = NULL
     },
     #endif
