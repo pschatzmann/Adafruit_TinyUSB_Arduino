@@ -51,6 +51,7 @@
 
 /***
  * USB Audio Device
+ * 
  */
 class Adafruit_USBD_Audio;
 extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
@@ -58,8 +59,20 @@ extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
  public:
   Adafruit_USBD_Audio(void) { self_Adafruit_USBD_Audio = this; }
-  void setOutput(Print &out) { p_print = &out; }
-  void setInput(Stream &in) { p_stream = &in; }
+  void setWriteCallback(size_t (*write_cb)(const void* data,size_t len, Adafruit_USBD_Audio* ref)) {
+    p_write_callback = write_cb;
+  }
+  void setReadCallback(size_t (*read_cb)(void* data,size_t len, Adafruit_USBD_Audio* ref)) {
+    p_read_callback = read_cb;
+  }
+  void setOutput(Print &out) { 
+    p_print = &out; 
+    setWriteCallback(defaultWriteCB);
+  }
+  void setInput(Stream &in) { 
+    p_stream = &in;
+    setReadCallback(defaultReadCB); 
+  }
 
   bool begin(unsigned long rate = 44100, int channels = 2,
              int bytesPerSample = 16);
@@ -161,8 +174,35 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   // Audio test data
   std::vector<uint8_t> in_buffer;
   std::vector<uint8_t> out_buffer;
+
+  // input/output callbacks
+  size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio* ref);
+  size_t (*p_read_callback)(uint8_t* data,size_t len, Adafruit_USBD_Audio* ref);
   Stream *p_stream = nullptr;
   Print *p_print = nullptr;
+
+  bool isReadDefined() {
+    return p_read_callback!=nullptr && p_read_callback!=defaultReadCB
+    || p_read_callback==defaultReadCB && p_stream!=nullptr;
+  }
+
+  bool isWriteDefined() {
+    return p_write_callback!=nullptr && p_write_callback!=defaultWriteCB
+    || p_read_callback==defaultWriteCB && p_print!=nullptr;
+  }
+
+  static size_t defaultWriteCB(const uint8_t* data,size_t len, Adafruit_USBD_Audio* ref){
+    Print p_print = ref.p_print;
+    if (p_print) return p_print->write((const uint8_t*)data, len);
+    return 0;
+  }
+
+  static size_t defaultReadCB(uint8_t* data,size_t len, Adafruit_USBD_Audio* ref){
+    Stream p_stream = ref.p_stream;
+    if (p_stream) return p_stream->readBytes((uint8_t*)data, len);
+    return 0;
+  }
+
 
 };
 

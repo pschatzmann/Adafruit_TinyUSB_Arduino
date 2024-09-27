@@ -372,11 +372,11 @@ bool Adafruit_USBD_Audio::tx_done_post_load_cb(uint8_t rhport,
   size_t rc = 0;
 
   // output audio to usb
-  if (p_stream) {
+  if (isReadDefined()) {
     if (out_buffer.size() < len) out_buffer.resize(len);
     uint8_t *adr = &out_buffer[0];
     memset(adr, len, 0);
-    rc = p_stream->readBytes(adr, len);
+    rc = p_read_callback(adr, len, this);
   }
 
   return rc > 0;
@@ -387,7 +387,7 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint8_t func_id, uint8_t ep_out,
                                               uint8_t cur_alt_setting) {
   // read audio from usb
-  if (p_print) {
+  if (isWriteDefined()) {
     uint16_t len = get_io_size();
     if (in_buffer.size() < len) in_buffer.resize(len);
     uint8_t *adr = &in_buffer[0];
@@ -402,10 +402,10 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
                                                uint8_t func_id, uint8_t ep_out,
                                                uint8_t cur_alt_setting) {
   // read audio from usb
-  if (p_print) {
+  if (isWriteDefined()) {
     uint16_t len = get_io_size();
     uint8_t *adr = &in_buffer[0];
-    size_t rc = p_print->write(adr, len);
+    size_t rc = p_write_callback(adr, len, this);
     // we assume a blocking write
     assert(rc == len);
     return rc > 0;
