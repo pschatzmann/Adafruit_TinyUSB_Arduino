@@ -9,23 +9,6 @@
 
 #if CFG_TUD_AUDIO
 
-const uint8_t desc_configuration[] = {
-    // Interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
-
-    // string index overall, string index spk, string index mic, EP Out & EP
-    // In
-    // address
-    TUD_AUDIO_DESCRIPTOR(2, 4, 5, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN | 0x80)
-
-    // Interface number, string index, protocol, report descriptor len, EP OUT
-    // &
-    // IN address, size & polling interval
-    //    TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID_INOUT, 6, 0, ???,
-    //    EPNUM_HID_OUT,
-    //    EPNUM_HID_IN | 0x80, 64, 1),
-};
-
 Adafruit_USBD_Audio *self_Adafruit_USBD_Audio = nullptr;
 
 /*------------- MAIN -------------*/
@@ -35,10 +18,10 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int bytesPerSample,
   tud_init(BOARD_TUD_RHPORT);
 
   // Init values
-  this->sampFreq = rate;
-  this->bytesPerSample = bytesPerSample;
+  this->_sample_rate = rate;
+  this->_bytes_per_sample = bytesPerSample;
   this->_channels = channeld;
-  clkValid = 1;
+  _clk_is_valid = 1;
   _is_active = true;
 
   return 0;
@@ -47,8 +30,8 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int bytesPerSample,
 void Adafruit_USBD_Audio::end() {
   tud_deinit(BOARD_TUD_RHPORT);
   _is_active = false;
-  if (out_buffer.size() > 0) out_buffer.resize(0);
-  if (in_buffer.size() > 0) out_buffer.resize(0);
+  if (_out_buffer.size() > 0) _out_buffer.resize(0);
+  if (_in_buffer.size() > 0) _out_buffer.resize(0);
 }
 
 //--------------------------------------------------------------------+
@@ -142,9 +125,9 @@ bool Adafruit_USBD_Audio::set_req_entity_cb(
         // Request uses format layout 2
         TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_2_t));
 
-        volume[channelNum] = (uint16_t)((audio_control_cur_2_t *)pBuff)->bCur;
+        _volume[channelNum] = (uint16_t)((audio_control_cur_2_t *)pBuff)->bCur;
 
-        TU_LOG2("    Set Volume: %d dB of channel: %u\r\n", volume[channelNum],
+        TU_LOG2("    Set Volume: %d dB of channel: %u\r\n", _volume[channelNum],
                 channelNum);
         return true;
 
@@ -161,7 +144,7 @@ bool Adafruit_USBD_Audio::set_req_entity_cb(
       case AUDIO_CS_CTRL_SAM_FREQ:
         TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_2_t));
 
-        sampFreq = (uint32_t)((audio_control_cur_2_t *)pBuff)->bCur;
+        _sample_rate = (uint32_t)((audio_control_cur_2_t *)pBuff)->bCur;
 
         TU_LOG2("Clock set current freq: %" PRIu32 "\r\n", sampFreq);
 
@@ -235,7 +218,7 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
         audio_desc_channel_cluster_t ret;
 
         // Those are dummy values for now
-        ret.bNrChannels = 1;
+        ret.bNrChannels = _channels;
         ret.bmChannelConfig = (audio_channel_config_t)0;
         ret.iChannelNames = 0;
 
@@ -266,8 +249,8 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
         switch (p_request->bRequest) {
           case AUDIO_CS_REQ_CUR:
             TU_LOG2("    Get Volume of channel: %u\r\n", channelNum);
-            return tud_control_xfer(rhport, p_request, &volume[channelNum],
-                                    sizeof(volume[channelNum]));
+            return tud_control_xfer(rhport, p_request, &_volume[channelNum],
+                                    sizeof(_volume[channelNum]));
 
           case AUDIO_CS_REQ_RANGE:
             TU_LOG2("    Get Volume range of channel: %u\r\n", channelNum);
@@ -305,8 +288,8 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
         switch (p_request->bRequest) {
           case AUDIO_CS_REQ_CUR:
             TU_LOG2("    Get Sample Freq.\r\n");
-            return tud_control_xfer(rhport, p_request, &sampFreq,
-                                    sizeof(sampFreq));
+            return tud_control_xfer(rhport, p_request, &_sample_rate,
+                                    sizeof(_sample_rate));
 
           case AUDIO_CS_REQ_RANGE: {
             TU_LOG2("    Get Sample Freq. range\r\n");
@@ -332,7 +315,7 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
       case AUDIO_CS_CTRL_CLK_VALID:
         // Only cur attribute exists for this request
         TU_LOG2("    Get Sample Freq. valid\r\n");
-        return tud_control_xfer(rhport, p_request, &clkValid, sizeof(clkValid));
+        return tud_control_xfer(rhport, p_request, &_clk_is_valid, sizeof(_clk_is_valid));
 
       // Unknown/Unsupported control
       default:
@@ -353,7 +336,7 @@ bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
   (void)ep_in;
   (void)cur_alt_setting;
 
-  tud_audio_write((uint8_t *)&out_buffer[0], get_io_size());
+  tud_audio_write((uint8_t *)&_out_buffer[0], get_io_size());
 
   return true;
 }
@@ -373,10 +356,10 @@ bool Adafruit_USBD_Audio::tx_done_post_load_cb(uint8_t rhport,
 
   // output audio to usb
   if (isReadDefined()) {
-    if (out_buffer.size() < len) out_buffer.resize(len);
-    uint8_t *adr = &out_buffer[0];
+    if (_out_buffer.size() < len) _out_buffer.resize(len);
+    uint8_t *adr = &_out_buffer[0];
     memset(adr, len, 0);
-    rc = p_read_callback(adr, len, this);
+    rc = p_read_callback(adr, len, *this);
   }
 
   return rc > 0;
@@ -389,8 +372,8 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
   // read audio from usb
   if (isWriteDefined()) {
     uint16_t len = get_io_size();
-    if (in_buffer.size() < len) in_buffer.resize(len);
-    uint8_t *adr = &in_buffer[0];
+    if (_in_buffer.size() < len) _in_buffer.resize(len);
+    uint8_t *adr = &_in_buffer[0];
     uint16_t len_read = tud_audio_read(adr, len);
     return len_read > 0;
   }
@@ -404,8 +387,8 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
   // read audio from usb
   if (isWriteDefined()) {
     uint16_t len = get_io_size();
-    uint8_t *adr = &in_buffer[0];
-    size_t rc = p_write_callback(adr, len, this);
+    uint8_t *adr = &_in_buffer[0];
+    size_t rc = p_write_callback(adr, len, *this);
     // we assume a blocking write
     assert(rc == len);
     return rc > 0;
@@ -426,7 +409,18 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
                                                      uint16_t bufsize) {
   (void)itfnum_deprecated;
 
-  uint16_t const desc_len = sizeof(desc_configuration);
+  uint8_t _itfnum = TinyUSBDevice.allocInterface(3);
+  uint8_t ep_in = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN);
+  uint8_t ep_out = TinyUSBDevice.allocEndpoint(TUSB_DIR_OUT);
+
+  int desc_len = 0;
+  // uint8_t cfg_desc[] = {TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100)};
+  // memcpy(buf + desc_len, cfg_desc, sizeof(cfg_desc));
+  // desc_len += sizeof(cfg_desc);
+
+  uint8_t audio_desc[] = {TUD_AUDIO_DESCRIPTOR(2, 4, 5, EPNUM_AUDIO_OUT, EPNUM_AUDIO_IN | 0x80)};
+  memcpy(buf + desc_len, audio_desc, sizeof(audio_desc));
+  desc_len += sizeof(audio_desc);
 
   // null buffer is used to get the length of descriptor only
   if (!buf) {
@@ -436,14 +430,6 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   if (bufsize < desc_len) {
     return 0;
   }
-
-  uint8_t _itfnum = TinyUSBDevice.allocInterface(2);
-  uint8_t ep_in = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN);
-  uint8_t ep_out = TinyUSBDevice.allocEndpoint(TUSB_DIR_OUT);
-
-  // const uint8_t *tmp = TUD_AUDIO_MIC_ONE_CH_2_FORMAT_DESCRIPTOR(itfnum, 0,
-  // ep_in);
-  memcpy(buf, desc_configuration, desc_len);
 
   return desc_len;
 }

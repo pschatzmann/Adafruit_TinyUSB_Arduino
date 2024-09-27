@@ -13,7 +13,7 @@
 
 Adafruit_USBD_Audio usb;
 
-size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio* ref) {
+size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
   int16_t* data16 = (int16_t*)data;
   size_t samples = len / sizeof(int16_t);
   size_t result = 0;

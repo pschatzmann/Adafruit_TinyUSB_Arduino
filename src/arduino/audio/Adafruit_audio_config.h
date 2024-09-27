@@ -271,9 +271,9 @@ enum {
 
 
 #define CFG_FUNC_1_N_CHANNELS_TX 2
-#define CONFIG_TOTAL_LEN                                      \
-  (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_DESC_LEN + \
-   CFG_TUD_HID * TUD_HID_DESC_LEN)
+// #define CONFIG_TOTAL_LEN                                      \
+//   (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_DESC_LEN + \
+//    CFG_TUD_HID * TUD_HID_DESC_LEN)
 
 #ifndef BOARD_TUD_RHPORT
 #define BOARD_TUD_RHPORT      0
