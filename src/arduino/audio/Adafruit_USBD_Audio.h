@@ -97,7 +97,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   }
 
   uint16_t getDescrCtlLen();
-
+  uint16_t getMaxEPSize();
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
   //--------------------------------------------------------------------+

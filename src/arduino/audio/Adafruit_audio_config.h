@@ -8,6 +8,7 @@
 #define AUDIO_USB_CHANNEL_ASSIGN  (AUDIO_CHANNEL_CONFIG_FRONT_LEFT | AUDIO_CHANNEL_CONFIG_FRONT_RIGHT)
 #define AUDIO_FREQ_MIN 8000
 #define AUDIO_FREQ_MAX 48000
+#define MAX_BITS_PER_SAMPLE 32
 
 // Unit numbers are arbitrary selected
 #define UAC2_ENTITY_CLOCK 0x07
@@ -24,13 +25,14 @@
 //--------------------------------------------------------------------
 #define CFG_TUD_AUDIO 1  // number of audio streaming interfaces
 
+#define CFG_TUD_AUDIO_ENABLE_ENCODING 0
 #define CFG_TUD_AUDIO_ENABLE_EP_IN true
 #define CFG_TUD_AUDIO_ENABLE_EP_OUT true
 //#define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP true
 
 #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN getUSBDAudioInterfaceDescriptorLength() 
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_IN
-#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX  CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_OUT
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_OUT
 
 // Number of Standard AS Interface Descriptors (4.9.1) defined per audio
 // function - this is required to be able to remember the current alternate

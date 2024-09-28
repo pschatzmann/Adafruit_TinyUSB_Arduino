@@ -410,6 +410,9 @@ uint16_t Adafruit_USBD_Audio::getDescrCtlLen(){
     TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
 }
 
+uint16_t Adafruit_USBD_Audio::getMaxEPSize(){
+  return TUD_AUDIO_EP_SIZE(_sample_rate, _bits_per_sample / 8, _channels);
+}
 
 uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
                                                      uint8_t *buf,
@@ -483,7 +486,7 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   uint8_t d12[] = {TUD_AUDIO_DESC_TYPE_I_FORMAT((uint8_t)(_bits_per_sample/8), _bits_per_sample)};
   append(buf, d12, sizeof(d12));
   /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */
-  uint8_t d13[] = {TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ ep_out, /*_attr*/ (TUSB_XFER_ISOCHRONOUS | TUSB_ISO_EP_ATT_ADAPTIVE | TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ TUD_AUDIO_EP_SIZE(_sample_rate, (uint8_t)(_bits_per_sample/8), (uint8_t)(_bits_per_sample/8)), /*_interval*/ 0x01)};
+  uint8_t d13[] = {TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ ep_out, /*_attr*/ (TUSB_XFER_ISOCHRONOUS | TUSB_ISO_EP_ATT_ADAPTIVE | TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ getMaxEPSize(), /*_interval*/ 0x01)};
   append(buf, d13, sizeof(d13));
   /* Class-Specific AS Isochronous Audio Data Endpoint Descriptor(4.10.1.2) */
   uint8_t d14[] = {TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_MILLISEC, /*_lockdelay*/ 0x0001)};
@@ -503,7 +506,7 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   uint8_t d18[] = {TUD_AUDIO_DESC_TYPE_I_FORMAT((uint8_t)(_bits_per_sample/8), (uint8_t)_bits_per_sample)};
   append(buf, d18, sizeof(d18));
   /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */
-  uint8_t d19[] = {TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ ep_in, /*_attr*/ (TUSB_XFER_ISOCHRONOUS | TUSB_ISO_EP_ATT_ASYNCHRONOUS | TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ TUD_AUDIO_EP_SIZE(_sample_rate, _bits_per_sample/8, _bits_per_sample/8), /*_interval*/ 0x01)};
+  uint8_t d19[] = {TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ ep_in, /*_attr*/ (TUSB_XFER_ISOCHRONOUS | TUSB_ISO_EP_ATT_ASYNCHRONOUS | TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ getMaxEPSize(), /*_interval*/ 0x01)};
   append(buf, d19, sizeof(d19));
   /* Class-Specific AS Isochronous Audio Data Endpoint Descriptor(4.10.1.2) */
   uint8_t d20[] = {TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, /*_lockdelay*/ 0x0000)};
