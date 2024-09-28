@@ -25,19 +25,22 @@
 #ifndef ADAFRUIT_USBD_AUDIO_H_
 #define ADAFRUIT_USBD_AUDIO_H_
 
-#include <vector>
+#include "Arduino.h"
 #include "Adafruit_TinyUSB.h"
-#include "Stream.h"
 #include "Adafruit_audio_config.h"
 #include "common/tusb_types.h"
-#include "Arduino.h"
+#include <vector>
 
 class Adafruit_USBD_Audio;
 extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
 /***
- * USB Audio Device
- * 
+ * USB Audio Device: 
+ * - provide data access via callbacks
+ * - configure audio info via begin method
+ * - provide all potential methods so that we can easily overwrite them
+ * - implement audio sink
+ * - implement audio source
  */
 
 class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
@@ -47,24 +50,29 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     pinMode(LED_BUILTIN, OUTPUT);
   }
   
+  /// callback for audio sink (speaker): we write out the received data e.g. to a dac
   void setWriteCallback(size_t (*write_cb)(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref)) {
     p_write_callback = write_cb;
   }
 
+  /// callback for audio source (microphone): we provide the audio data e.g. from the adc
   void setReadCallback(size_t (*read_cb)(uint8_t* data,size_t len, Adafruit_USBD_Audio& ref)) {
     p_read_callback = read_cb;
   }
 
+  /// Alternative to setWriteCallback
   void setOutput(Print &out) { 
     p_print = &out; 
     setWriteCallback(defaultWriteCB);
   }
 
+  /// Alternaive to setReadCallback
   void setInput(Stream &in) { 
     p_stream = &in;
     setReadCallback(defaultReadCB); 
   }
 
+  /// start the processing
   virtual bool begin(unsigned long rate = 44100, int channels = 2,
              int bitsPerSample = 16);
 

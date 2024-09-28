@@ -4,41 +4,43 @@
  products from Adafruit!
 
  MIT license, check LICENSE for more information
- Copyright (c) 2024 Phil Schatzmann
+ Copyright (c) 2024 Phl Schatzmann
 
- This example receives Audio from your PC and you can visualize the
- audio data in the Arduino Serial Plotter
+ This example reads audio data from an I2S ADC which you can output 
+ on your PC
 
 *********************************************************************/
+#ifndef ARDUINO_ARCH_RP2040
+#  error This example is using the RP2040 I2S API: Adapt it for your platform
+#endif
 
 #include "Adafruit_TinyUSB.h"
+#include "I2S.h"
 
+I2S i2s(INPUT);
 Adafruit_USBD_Audio usb;
-
-size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
-  int16_t* data16 = (int16_t*)data;
-  size_t samples = len / sizeof(int16_t);
-  size_t result = 0;
-  // print received data to serial
-  for (int j = 0; j < samples; j+=2) {
-    Serial.print(data16[j]);
-    Serial.print(",");
-    Serial.println(data16[j+1]);
-    result += sizeof(int16_t)*2;
-  }
-  return result;
-}
+const int sample_rate = 44100;
+const int bits = 16;
+const int channels = 2;
 
 void setup() {
   // Manual begin() is required on core without built-in support e.g. mbed rp2040
   if (!TinyUSBDevice.isInitialized()) {
     TinyUSBDevice.begin(0);
   }
-  Serial.begin(115200);
 
-  // Start USB device as Audio Sink
-  usb.setWriteCallback(writeCB);
-  usb.begin(44100, 2, 16);
+  Serial.begin(115200);
+  
+  // setup i2s
+  i2s.setDATA(0);
+  i2s.setBCLK(1); // Note: LRCLK = BCLK + 1
+  i2s.setBitsPerSample(bits);
+  i2s.setFrequency(sample_rate);
+  i2s.begin();
+
+  // Start USB device as Audio Source
+  usb.setInput(i2s);
+  usb.begin(sample_rate, channels, bits);
 
   // If already enumerated, additional class driverr begin() e.g msc, hid, midi won't take effect until re-enumeration
   if (TinyUSBDevice.mounted()) {
@@ -46,12 +48,7 @@ void setup() {
     delay(10);
     TinyUSBDevice.attach();
   }
-
 }
 
 void loop() {
-  #ifdef TINYUSB_NEED_POLLING_TASK
-  // Manual call tud_task since it isn't called by Core's background
-  TinyUSBDevice.task();
-  #endif
 }

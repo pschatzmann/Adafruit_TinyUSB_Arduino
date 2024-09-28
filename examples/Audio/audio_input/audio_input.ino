@@ -4,9 +4,10 @@
  products from Adafruit!
 
  MIT license, check LICENSE for more information
- Copyright (c) 2019 Ha Thach for Adafruit Industries
- All text above, and the splash screen below must be included in
- any redistribution
+ Copyright (c) 2024 Phl Schatzmann
+
+ This example generates white noise that you can output on your PC
+
 *********************************************************************/
 
 #include "Adafruit_TinyUSB.h"
