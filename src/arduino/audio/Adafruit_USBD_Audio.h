@@ -30,17 +30,22 @@
 #include "Stream.h"
 #include "Adafruit_audio_config.h"
 #include "common/tusb_types.h"
+#include "Arduino.h"
+
+class Adafruit_USBD_Audio;
+extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
 /***
  * USB Audio Device
  * 
  */
-class Adafruit_USBD_Audio;
-extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
 class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
  public:
-  Adafruit_USBD_Audio(void) { self_Adafruit_USBD_Audio = this; }
+  Adafruit_USBD_Audio(void) { 
+    self_Adafruit_USBD_Audio = this; 
+    pinMode(LED_BUILTIN, OUTPUT);
+  }
   
   void setWriteCallback(size_t (*write_cb)(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref)) {
     p_write_callback = write_cb;
@@ -86,7 +91,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
 
   // from Adafruit_USBD_Interface
   virtual uint16_t getInterfaceDescriptor(uint8_t itfnum_deprecated,
-                                          uint8_t *buf, uint16_t bufsize);
+                                          uint8_t *buf, uint16_t bufsize) override;
 
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
@@ -142,8 +147,17 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
 
   virtual bool set_itf_close_EP_cb(uint8_t rhport,
                                    tusb_control_request_t const *p_request);
+  /// Call from loop to blink led
+  void updateLED(){
+    if (millis() > led_timeout){
+      led_timeout = millis() + 1000;
+      led_active = ! led_active;
+      digitalWrite(LED_BUILTIN, led_active);
+    }
+  }
 
  protected:
+  int rh_port = 0;
   int _channels = CFG_FUNC_1_N_CHANNELS_TX;
   bool _is_active = false;
 
@@ -158,12 +172,21 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   // Audio test data
   std::vector<uint8_t> _in_buffer;
   std::vector<uint8_t> _out_buffer;
+  bool led_active = false;
+  uint64_t led_timeout = 0;
+
 
   // input/output callbacks
   size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
   size_t (*p_read_callback)(uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
   Stream *p_stream = nullptr;
   Print *p_print = nullptr;
+  int append_pos = 0;
+
+  void append(uint8_t *to, uint8_t *str, int len){
+    if (to != nullptr) memcpy(to + append_pos, str, len);
+    append_pos += len;
+  }
 
   bool isReadDefined() {
     return p_read_callback!=nullptr && p_read_callback!=defaultReadCB
