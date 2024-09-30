@@ -32,12 +32,21 @@ Adafruit_USBD_Audio *self_Adafruit_USBD_Audio = nullptr;
 
 /*------------- MAIN -------------*/
 bool Adafruit_USBD_Audio::begin(unsigned long rate, int bytesPerSample,
-                                int channeld) {
+                                int channels) {
+
+  if (rate > AUDIO_FREQ_MAX || rate < AUDIO_FREQ_MIN)
+    return false;
+  if (channels>AUDIO_USB_MAX_CHANNELS)
+    return false;
+  if (bytesPerSample>MAX_BITS_PER_SAMPLE){
+    return false;
+  }
+
   // init device stack on configured roothub port
   // Init values
   this->_sample_rate = rate;
   this->_bits_per_sample = bytesPerSample;
-  this->_channels = channeld;
+  this->_channels = channels;
   _clk_is_valid = 1;
   _is_active = true;
 
@@ -456,13 +465,13 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   uint8_t _itfnum_ctl = TinyUSBDevice.allocInterface();
   uint8_t ep_fb = TinyUSBDevice.allocEndpoint(_itfnum_ctl);
 
-  if (isReadDefined()) {
+  if (isWriteDefined()) {
     _itfnum_spk = TinyUSBDevice.allocInterface();
     ep_in = TinyUSBDevice.allocEndpoint(_itfnum_spk);
     itf_number_total++;
   }
 
-  if (isWriteDefined()) {
+  if (isReadDefined()) {
     _itfnum_mic = TinyUSBDevice.allocInterface();
      ep_out = TinyUSBDevice.allocEndpoint(_itfnum_mic);
     itf_number_total++;
@@ -497,7 +506,8 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
   append(buf, d8, sizeof(d8));
 
-  if (isReadDefined()) {
+  // audio sink (speaker)
+  if (isWriteDefined()) {
     /* Standard AS Interface Descriptor(4.9.1) */
     /* Interface 1, Alternate 0 - default alternate setting with 0 bandwidth */
     uint8_t d9[] = {TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(_itfnum_spk), /*_altset*/ 0x00, /*_nEPs*/ 0x00, /*_stridx*/ _strid_rx)};
@@ -520,7 +530,8 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
     append(buf, d14, sizeof(d14));
   }
 
-  if (isWriteDefined()) {
+  // audio source (microphone)
+  if (isReadDefined()) {
     /* Standard AS Interface Descriptor(4.9.1) */\
     /* Interface 2, Alternate 0 - default alternate setting with 0 bandwidth */
     uint8_t d15[] = {TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(_itfnum_mic), /*_altset*/ 0x00, /*_nEPs*/ 0x00, /*_stridx*/ _strid_tx)};
