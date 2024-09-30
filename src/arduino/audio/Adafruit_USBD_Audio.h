@@ -190,6 +190,13 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   bool led_active = false;
   uint64_t led_timeout = 0;
 
+  // persisted descriptor data
+  uint8_t _itfnum_spk = 0, ep_in = 0;
+  uint8_t _itfnum_mic = 0, ep_out = 0;
+  uint8_t itf_number_total = 0;
+  uint8_t _itfnum_ctl = 0;
+  uint8_t ep_fb = 0;
+
 
   // input/output callbacks
   size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);

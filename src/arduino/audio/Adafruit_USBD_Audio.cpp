@@ -31,21 +31,20 @@
 Adafruit_USBD_Audio *self_Adafruit_USBD_Audio = nullptr;
 
 /*------------- MAIN -------------*/
-bool Adafruit_USBD_Audio::begin(unsigned long rate, int bytesPerSample,
-                                int channels) {
+bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels, int bitsPerSample) {
 
   if (rate > AUDIO_FREQ_MAX || rate < AUDIO_FREQ_MIN)
     return false;
-  if (channels>AUDIO_USB_MAX_CHANNELS)
+  if (channels > AUDIO_USB_MAX_CHANNELS)
     return false;
-  if (bytesPerSample>MAX_BITS_PER_SAMPLE){
+  if (bitsPerSample > MAX_BITS_PER_SAMPLE){
     return false;
   }
 
   // init device stack on configured roothub port
   // Init values
   this->_sample_rate = rate;
-  this->_bits_per_sample = bytesPerSample;
+  this->_bits_per_sample = bitsPerSample;
   this->_channels = channels;
   _clk_is_valid = 1;
   _is_active = true;
@@ -433,9 +432,19 @@ bool Adafruit_USBD_Audio::set_itf_close_EP_cb(
 }
 
 uint16_t Adafruit_USBD_Audio::getDescrCtlLen(){
-  return TUD_AUDIO_DESC_CLK_SRC_LEN + TUD_AUDIO_DESC_INPUT_TERM_LEN +     
-    TUD_AUDIO_DESC_OUTPUT_TERM_LEN + TUD_AUDIO_DESC_INPUT_TERM_LEN + 
-    TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
+  uint16_t len = TUD_AUDIO_DESC_CLK_SRC_LEN;
+
+  if (isWriteDefined()) {
+    len += TUD_AUDIO_DESC_INPUT_TERM_LEN;
+    len += TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
+  }
+
+  if (isReadDefined()) {
+    len += TUD_AUDIO_DESC_INPUT_TERM_LEN;
+    len += TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
+  }
+
+  return len;
 }
 
 uint16_t Adafruit_USBD_Audio::getMaxEPSize(){
@@ -458,20 +467,19 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   uint8_t _strid_rx = 0; // 4;
   uint8_t _strid_tx = 0; //5;
 
-  uint8_t _itfnum_spk, ep_in;
-  uint8_t _itfnum_mic, ep_out;
-  uint8_t itf_number_total = 1;
+  if (itf_number_total == 0){
+   itf_number_total = 1;
+   _itfnum_ctl = TinyUSBDevice.allocInterface();
+   ep_fb = TinyUSBDevice.allocEndpoint(_itfnum_ctl);
+  }
 
-  uint8_t _itfnum_ctl = TinyUSBDevice.allocInterface();
-  uint8_t ep_fb = TinyUSBDevice.allocEndpoint(_itfnum_ctl);
-
-  if (isWriteDefined()) {
+  if (isWriteDefined() && _itfnum_spk==0) {
     _itfnum_spk = TinyUSBDevice.allocInterface();
     ep_in = TinyUSBDevice.allocEndpoint(_itfnum_spk);
     itf_number_total++;
   }
 
-  if (isReadDefined()) {
+  if (isReadDefined() && _itfnum_mic==0) {
     _itfnum_mic = TinyUSBDevice.allocInterface();
      ep_out = TinyUSBDevice.allocEndpoint(_itfnum_mic);
     itf_number_total++;
@@ -493,18 +501,22 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   /* Clock Source Descriptor(4.7.2.1) */
   uint8_t d4[] = {TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_CLOCK, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_EXT_CLK, /*_ctrl*/ (AUDIO_CTRL_NONE << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS)|(AUDIO_CTRL_NONE << AUDIO_CLOCK_SOURCE_CTRL_CLK_VAL_POS), /*_assocTerm*/ 0x00,  /*_stridx*/ 0x00)};
   append(buf, d4, sizeof(d4));
-  /* Input Terminal Descriptor(4.7.2.4) */
-  uint8_t d5[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_USB_CHANNEL_ASSIGN, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_NONE << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00)};
-  append(buf, d5, sizeof(d5));
-  /* Output Terminal Descriptor(4.7.2.5) */
-  uint8_t d6[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_OUT_GENERIC_SPEAKER, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
-  append(buf, d6, sizeof(d6));
-  /* Input Terminal Descriptor(4.7.2.4) */
-  uint8_t d7[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_USB_CHANNEL_ASSIGN, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_NONE << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00)};
-  append(buf, d7, sizeof(d7));
-  /* Output Terminal Descriptor(4.7.2.5) */
-  uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
-  append(buf, d8, sizeof(d8));
+  if (isWriteDefined()) {
+    /* Input Terminal Descriptor(4.7.2.4) */
+    uint8_t d5[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_USB_CHANNEL_ASSIGN, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_NONE << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00)};
+    append(buf, d5, sizeof(d5));
+    /* Output Terminal Descriptor(4.7.2.5) */
+    uint8_t d6[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_OUT_GENERIC_SPEAKER, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
+    append(buf, d6, sizeof(d6));
+  }
+  if (isReadDefined()) {
+    /* Input Terminal Descriptor(4.7.2.4) */
+    uint8_t d7[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_USB_CHANNEL_ASSIGN, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_NONE << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00)};
+    append(buf, d7, sizeof(d7));
+    /* Output Terminal Descriptor(4.7.2.5) */
+    uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
+    append(buf, d8, sizeof(d8));
+  }
 
   // audio sink (speaker)
   if (isWriteDefined()) {
