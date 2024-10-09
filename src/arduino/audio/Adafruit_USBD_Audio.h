@@ -160,6 +160,13 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   virtual bool set_itf_close_EP_cb(uint8_t rhport,
                                    tusb_control_request_t const *p_request);
 
+// for speaker
+  virtual bool clock_get_request(uint8_t rhport, audio_control_request_t const *request);
+  virtual bool clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
+#if CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP
+  virtual void feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t* feedback_param);
+#endif
+
 
   /// Call from loop to blink led
   void updateLED(int pin=LED_BUILTIN){
@@ -218,7 +225,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   uint8_t _ep_fb = 0;
   bool _cdc_active = true;
 
-
   // input/output callbacks
   size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
   size_t (*p_read_callback)(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref);
@@ -226,6 +232,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   Print *p_print = nullptr;
   int append_pos = 0;
   int desc_len = 0;
+
 
   void append(uint8_t *to, uint8_t *str, int len){
     if (to != nullptr) memcpy(to + append_pos, str, len);
@@ -253,6 +260,11 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     if (p_stream) return p_stream->readBytes((uint8_t*)data, len);
     return 0;
   }
+
+  // for speaker
+  bool feature_unit_get_request(uint8_t rhport, audio_control_request_t const *request);
+  bool feature_unit_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
+
 
 };
 

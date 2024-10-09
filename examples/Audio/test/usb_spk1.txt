@@ -1,5 +1,5 @@
 
-Bus 001 Device 075: ID 239a:cafe Adafruit Pico
+Bus 001 Device 086: ID 239a:cafe Adafruit Pico
 Device Descriptor:
   bLength                18
   bDescriptorType         1
@@ -83,7 +83,7 @@ Device Descriptor:
         bDescriptorSubtype      3 (OUTPUT_TERMINAL)
         bTerminalID             3
         wTerminalType      0x0304 Desktop Speaker
-        bAssocTerminal          3
+        bAssocTerminal          1
         bSourceID               2
         bCSourceID              4
         bmControls         0x0000
@@ -146,7 +146,7 @@ Device Descriptor:
       Endpoint Descriptor:
         bLength                 7
         bDescriptorType         5
-        bEndpointAddress     0x81  EP 1 IN
+        bEndpointAddress     0x01  EP 1 OUT
         bmAttributes            5
           Transfer Type            Isochronous
           Synch Type               Asynchronous
