@@ -47,7 +47,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
  public:
   Adafruit_USBD_Audio(void) { 
     self_Adafruit_USBD_Audio = this; 
-    pinMode(LED_BUILTIN, OUTPUT);
     setupDebugPins();
   }
   
@@ -105,7 +104,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     return getInterfaceDescriptor(0, nullptr, 0);
   }
 
-  uint16_t getDescrCtlLen();
   uint16_t getMaxEPSize();
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
@@ -164,11 +162,15 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
 
 
   /// Call from loop to blink led
-  void updateLED(){
+  void updateLED(int pin=LED_BUILTIN){
+    if (_is_led_setup){
+      pinMode(pin, OUTPUT);
+      _is_led_setup = false;
+    }
     if (millis() > led_timeout){
       led_timeout = millis() + 1000;
       led_active = ! led_active;
-      digitalWrite(LED_BUILTIN, led_active);
+      digitalWrite(pin, led_active);
     }
   }
 
@@ -186,6 +188,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   int rh_port = 0;
   uint8_t _channels = 0;
   bool _is_active = false;
+  bool _is_led_setup = true;
 
   // Audio controls
   bool _mute[AUDIO_USB_MAX_CHANNELS+1] = {false};       // +1 for master channel 0
@@ -209,7 +212,8 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   uint8_t _itfnum_mic = 0, ep_spk = 0;
   uint8_t itf_number_total = 0;
   uint8_t _itfnum_ctl = 0;
-  uint8_t ep_fb = 0;
+  uint8_t _ep_ctl = 0;
+  uint8_t _ep_mic = 0;
   bool _cdc_active = false;
 
 

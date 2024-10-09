@@ -1,5 +1,5 @@
 
-Bus 001 Device 068: ID 239a:cafe Adafruit Pico
+Bus 001 Device 126: ID 239a:cafe Adafruit Pico
 Device Descriptor:
   bLength                18
   bDescriptorType         1
@@ -51,7 +51,7 @@ Device Descriptor:
         bDescriptorSubtype      1 (HEADER)
         bcdADC               2.00
         bCategory               3
-        wTotalLength       0x0040
+        wTotalLength       0x0009
         bmControls           0x00
       AudioControl Interface Descriptor:
         bLength                 8
@@ -74,8 +74,7 @@ Device Descriptor:
         bNrChannels             2
         bmChannelConfig    0x00000000
         iChannelNames           0 
-        bmControls         0x0004
-          Connector Control (read-only)
+        bmControls         0x0000
         iTerminal               0 
       AudioControl Interface Descriptor:
         bLength                12
