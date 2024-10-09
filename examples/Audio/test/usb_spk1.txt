@@ -1,5 +1,5 @@
 
-Bus 001 Device 126: ID 239a:cafe Adafruit Pico
+Bus 001 Device 075: ID 239a:cafe Adafruit Pico
 Device Descriptor:
   bLength                18
   bDescriptorType         1
@@ -18,7 +18,7 @@ Device Descriptor:
   Configuration Descriptor:
     bLength                 9
     bDescriptorType         2
-    wTotalLength       0x0091
+    wTotalLength       0x0098
     bNumInterfaces          2
     bConfigurationValue     1
     iConfiguration          0 
@@ -50,17 +50,17 @@ Device Descriptor:
         bDescriptorType        36
         bDescriptorSubtype      1 (HEADER)
         bcdADC               2.00
-        bCategory               3
-        wTotalLength       0x0009
+        bCategory               1
+        wTotalLength       0x0040
         bmControls           0x00
       AudioControl Interface Descriptor:
         bLength                 8
         bDescriptorType        36
         bDescriptorSubtype     10 (CLOCK_SOURCE)
         bClockID                4
-        bmAttributes            1 Internal fixed clock 
-        bmControls           0x01
-          Clock Frequency Control (read-only)
+        bmAttributes            3 Internal programmable clock 
+        bmControls           0x03
+          Clock Frequency Control (read/write)
         bAssocTerminal          1
         iClockSource            0 
       AudioControl Interface Descriptor:
@@ -68,21 +68,22 @@ Device Descriptor:
         bDescriptorType        36
         bDescriptorSubtype      2 (INPUT_TERMINAL)
         bTerminalID             1
-        wTerminalType      0x0201 Microphone
-        bAssocTerminal          3
+        wTerminalType      0x0101 USB Streaming
+        bAssocTerminal          0
         bCSourceID              4
         bNrChannels             2
         bmChannelConfig    0x00000000
         iChannelNames           0 
-        bmControls         0x0000
+        bmControls         0x0004
+          Connector Control (read-only)
         iTerminal               0 
       AudioControl Interface Descriptor:
         bLength                12
         bDescriptorType        36
         bDescriptorSubtype      3 (OUTPUT_TERMINAL)
         bTerminalID             3
-        wTerminalType      0x0101 USB Streaming
-        bAssocTerminal          1
+        wTerminalType      0x0304 Desktop Speaker
+        bAssocTerminal          3
         bSourceID               2
         bCSourceID              4
         bmControls         0x0000
@@ -118,7 +119,7 @@ Device Descriptor:
       bDescriptorType         4
       bInterfaceNumber        1
       bAlternateSetting       1
-      bNumEndpoints           1
+      bNumEndpoints           2
       bInterfaceClass         1 Audio
       bInterfaceSubClass      2 Streaming
       bInterfaceProtocol     32 
@@ -127,7 +128,7 @@ Device Descriptor:
         bLength                16
         bDescriptorType        36
         bDescriptorSubtype      1 (AS_GENERAL)
-        bTerminalLink           3
+        bTerminalLink           1
         bmControls           0x00
         bFormatType             1
         bmFormats          0x00000001
@@ -158,5 +159,15 @@ Device Descriptor:
           bDescriptorSubtype      1 (EP_GENERAL)
           bmAttributes         0x00
           bmControls           0x00
-          bLockDelayUnits         0 Undefined
-          wLockDelay         0x0000
+          bLockDelayUnits         1 Milliseconds
+          wLockDelay         0x0001
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x82  EP 2 IN
+        bmAttributes           17
+          Transfer Type            Isochronous
+          Synch Type               None
+          Usage Type               Feedback
+        wMaxPacketSize     0x0004  1x 4 bytes
+        bInterval               1

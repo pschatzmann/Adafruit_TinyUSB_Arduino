@@ -35,15 +35,16 @@
 #define MAX_BITS_PER_SAMPLE       24
 
 // Unit numbers are arbitrary selected
-#define UAC2_ENTITY_CLOCK 0x04
 // Speaker path
-#define UAC2_ENTITY_SPK_INPUT_TERMINAL 0x08
-#define UAC2_ENTITY_SPK_FEATURE_UNIT 0x09
-#define UAC2_ENTITY_SPK_OUTPUT_TERMINAL 0x10
+#define UAC2_ENTITY_SPK_CLOCK 0x04
+#define UAC2_ENTITY_SPK_INPUT_TERMINAL 0x01
+#define UAC2_ENTITY_SPK_FEATURE_UNIT 0x02
+#define UAC2_ENTITY_SPK_OUTPUT_TERMINAL 0x03
 // Microphone path
-#define UAC2_ENTITY_MIC_INPUT_TERMINAL 0x01
-#define UAC2_ENTITY_MIC_FEATURE_UNIT 0x02
-#define UAC2_ENTITY_MIC_OUTPUT_TERMINAL 0x03
+#define UAC2_ENTITY_MIC_CLOCK 0x14
+#define UAC2_ENTITY_MIC_INPUT_TERMINAL 0x11
+#define UAC2_ENTITY_MIC_FEATURE_UNIT 0x12
+#define UAC2_ENTITY_MIC_OUTPUT_TERMINAL 0x13
 
 
 // //--------------------------------------------------------------------
@@ -75,6 +76,7 @@
 #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                 1
 #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ              64
 
+#define CFG_TUD_AUDIO_ENABLE_EP_OUT                   1
 #define CFG_TUD_AUDIO_ENABLE_EP_IN                    1
 #define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX    2         // This value is not required by the driver, it parses this information from the descriptor once the alternate interface is set by the host - we use it for the setup
 #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX            2         // This value is not required by the driver, it parses this information from the descriptor once the alternate interface is set by the host - we use it for the setup
@@ -84,8 +86,13 @@
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX             CFG_TUD_AUDIO_EP_SZ_IN
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ          (TUD_OPT_HIGH_SPEED ? 32 : 4) * CFG_TUD_AUDIO_EP_SZ_IN // Example write FIFO every 1ms, so it should be 8 times larger for HS device
 
+#define CFG_TUD_AUDIO_EP_OUT_FLOW_CONTROL             1
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX            CFG_TUD_AUDIO_EP_SZ_OUT
+#define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ         (TUD_OPT_HIGH_SPEED ? 32 : 4) * CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX // Example read FIFO every 1ms, so it should be 8 times larger for HS device
+
 // hack to make CFG_TUD_AUDIO_FUNC_1_DESC_LEN dynamic
 extern int getUSBDAudioInterfaceDescriptorLength();
+
 
 
 #endif // ARDUINO_ARCH_RP2040
