@@ -48,6 +48,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   Adafruit_USBD_Audio(void) { 
     self_Adafruit_USBD_Audio = this; 
     pinMode(LED_BUILTIN, OUTPUT);
+    setupDebugPins();
   }
   
   /// callback for audio sink (speaker): we write out the received data e.g. to a dac
@@ -111,7 +112,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   //--------------------------------------------------------------------+
 
   uint16_t get_io_size() {
-    return _sample_rate / (TUD_OPT_HIGH_SPEED ? 8000 : 1000) * _bits_per_sample;
+    return TUD_AUDIO_EP_SIZE(_sample_rate, _bits_per_sample/8, _channels);
   }
 
   // Invoked when set interface is called, typically on start/stop streaming or
@@ -171,36 +172,50 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     }
   }
 
+  void setupDebugPins(){
+    for (int j=0;j<8;j++){
+      pinMode(j, OUTPUT);
+    }
+  }
+
+  void setCDCActive(bool flag){
+    _cdc_active = flag;
+  }
+
  protected:
   int rh_port = 0;
   uint8_t _channels = 0;
   bool _is_active = false;
 
   // Audio controls
-  bool _mute[AUDIO_USB_MAX_CHANNELS] = {false};       // +1 for master channel 0
-  uint16_t _volume[AUDIO_USB_MAX_CHANNELS] = {0};  // +1 for master channel 0
+  bool _mute[AUDIO_USB_MAX_CHANNELS+1] = {false};       // +1 for master channel 0
+  uint16_t _volume[AUDIO_USB_MAX_CHANNELS+1] = {0};  // +1 for master channel 0
   // Current states
   uint32_t _sample_rate;
   uint8_t _bits_per_sample;
-  uint8_t _clk_is_valid = false;
+  uint8_t _clk_is_valid = true;
 
   // Audio test data
   std::vector<uint8_t> _in_buffer;
   std::vector<uint8_t> _out_buffer;
+  uint16_t _out_buffer_available = 0;
+  uint16_t _in_buffer_available = 0;
+
   bool led_active = false;
   uint64_t led_timeout = 0;
 
   // persisted descriptor data
-  uint8_t _itfnum_spk = 0, ep_in = 0;
-  uint8_t _itfnum_mic = 0, ep_out = 0;
+  uint8_t _itfnum_spk = 0, ep_mic = 0;
+  uint8_t _itfnum_mic = 0, ep_spk = 0;
   uint8_t itf_number_total = 0;
   uint8_t _itfnum_ctl = 0;
   uint8_t ep_fb = 0;
+  bool _cdc_active = false;
 
 
   // input/output callbacks
   size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
-  size_t (*p_read_callback)(uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
+  size_t (*p_read_callback)(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref);
   Stream *p_stream = nullptr;
   Print *p_print = nullptr;
   int append_pos = 0;
