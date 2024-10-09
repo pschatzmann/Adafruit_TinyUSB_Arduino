@@ -25,6 +25,9 @@
 
 #pragma once
 
+// for a start we support audio only on the Rasperry Pico
+#if defined(ARDUINO_ARCH_RP2040)
+
 #define CFG_TUD_AUDIO             1
 #define AUDIO_USB_MAX_CHANNELS    2
 #define AUDIO_FREQ_MIN            8000
@@ -48,8 +51,6 @@
 // //--------------------------------------------------------------------
 
 // // Look at /proc/asound/<device>/stream0 to verify the USB settings
-extern int getUSBDAudioInterfaceDescriptorLength();
-
 #ifndef CFG_TUSB_MEM_ALIGN
 #define CFG_TUSB_MEM_ALIGN        __attribute__ ((aligned(4)))
 #endif
@@ -83,4 +84,8 @@ extern int getUSBDAudioInterfaceDescriptorLength();
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX             CFG_TUD_AUDIO_EP_SZ_IN
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ          (TUD_OPT_HIGH_SPEED ? 32 : 4) * CFG_TUD_AUDIO_EP_SZ_IN // Example write FIFO every 1ms, so it should be 8 times larger for HS device
 
+// hack to make CFG_TUD_AUDIO_FUNC_1_DESC_LEN dynamic
+extern int getUSBDAudioInterfaceDescriptorLength();
 
+
+#endif // ARDUINO_ARCH_RP2040
