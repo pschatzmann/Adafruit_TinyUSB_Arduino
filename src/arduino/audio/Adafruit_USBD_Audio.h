@@ -43,7 +43,8 @@ class Adafruit_USBD_Audio;
 extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
 // LED delays 
-enum class LEDDelay { INACTIVE=0, ACTIVE=1000, ERROR=500};
+enum class LEDDelay { INACTIVE=0, PLAYING=2000,ACTIVE=1000, ERROR=500};
+
 
 /***
  * USB Audio Device: 
@@ -117,7 +118,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   }
 
   /// Call from loop to blink led
-  void updateLED(int pin=LED_BUILTIN);
+  bool updateLED(int pin=LED_BUILTIN);
 
   /// Define the led delay
   void setLEDDelay(LEDDelay delayMs) {
@@ -188,8 +189,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
                                    tusb_control_request_t const *p_request);
 
 // for speaker
-  virtual bool clock_get_request(uint8_t rhport, audio_control_request_t const *request);
-  virtual bool clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
 #if CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP
   virtual void feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t* feedback_param);
 #endif
@@ -222,13 +221,13 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   // persisted descriptor data
   uint8_t _itfnum_spk = 0, ep_mic = 0;
   uint8_t _itfnum_mic = 0, ep_spk = 0;
-  uint8_t itf_number_total = 0;
+  uint8_t _itf_number_total = 0;
   uint8_t _itfnum_ctl = 0;
   uint8_t _ep_ctl = 0;
   uint8_t _ep_mic = 0;
   uint8_t _ep_spk = 0;
   uint8_t _ep_fb = 0;
-  bool _cdc_active = true;
+  bool _cdc_active = CDC_DEFAULT_ACTIVE;
 
   // input/output callbacks
   size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
@@ -239,25 +238,21 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   int _desc_len = 0;
 
   /// We can use 8 debug pins with a logic analyser
-  void setupDebugPins(){
-#if AUDIO_DEBUG
-    for (int j=0;j<8;j++){
-      pinMode(j, OUTPUT);
-    }
-#endif
-  }
+  void setupDebugPins();
+
+  void debugWriteN(int pin,int n, int delayUs=1);
 
   void append(uint8_t *to, uint8_t *str, int len){
     if (to != nullptr) memcpy(to + _append_pos, str, len);
     _append_pos += len;
   }
 
-  bool isReadDefined() {
+  bool isMicrophone() {
     return p_read_callback!=nullptr && p_read_callback!=defaultReadCB
     || p_read_callback==defaultReadCB && p_stream!=nullptr;
   }
 
-  bool isWriteDefined() {
+  bool isSpeaker() {
     return p_write_callback!=nullptr && p_write_callback!=defaultWriteCB
     || p_write_callback==defaultWriteCB && p_print!=nullptr;
   }
@@ -275,9 +270,15 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   }
 
   // for speaker
-  bool feature_unit_get_request(uint8_t rhport, audio_control_request_t const *request);
-  bool feature_unit_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
+  virtual bool speaker_feature_unit_get_request(uint8_t rhport, audio_control_request_t const *request);
+  virtual bool speaker_feature_unit_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
+  virtual bool speaker_clock_get_request(uint8_t rhport, audio_control_request_t const *request);
+  virtual bool speaker_clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
 
+  virtual bool microphone_feature_unit_get_request(uint8_t rhport, tusb_control_request_t const *request);
+//virtual bool microphon_feature_unit_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
+  virtual bool microphone_clock_get_request(uint8_t rhport, tusb_control_request_t const *request);
+//virtual bool microphone_clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
 
 };
 
