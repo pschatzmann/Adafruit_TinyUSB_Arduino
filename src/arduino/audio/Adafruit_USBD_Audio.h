@@ -31,8 +31,19 @@
 #include "common/tusb_types.h"
 #include <vector>
 
+// output using 5 debug pins
+#if AUDIO_DEBUG
+# define debugWrite(pin, active) digitalWrite(pin, active);
+#else
+# define debugWrite(pin, active)
+#endif
+
+// Reference to audio
 class Adafruit_USBD_Audio;
 extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
+
+// LED delays 
+enum class LEDDelay { INACTIVE=0, ACTIVE=1000, ERROR=500};
 
 /***
  * USB Audio Device: 
@@ -45,6 +56,7 @@ extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
 class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
  public:
+
   Adafruit_USBD_Audio(void) { 
     self_Adafruit_USBD_Audio = this; 
     setupDebugPins();
@@ -104,7 +116,22 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     return getInterfaceDescriptor(0, nullptr, 0);
   }
 
+  /// Call from loop to blink led
+  void updateLED(int pin=LED_BUILTIN);
+
+  /// Define the led delay
+  void setLEDDelay(LEDDelay delayMs) {
+    _led_delay_ms = delayMs;
+  }
+
+  /// allow/disalow Serial output
+  void setCDCActive(bool flag){
+    _cdc_active = flag;
+  }
+
   uint16_t getMaxEPSize();
+
+
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
   //--------------------------------------------------------------------+
@@ -168,34 +195,12 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
 #endif
 
 
-  /// Call from loop to blink led
-  void updateLED(int pin=LED_BUILTIN){
-    if (_is_led_setup){
-      pinMode(pin, OUTPUT);
-      _is_led_setup = false;
-    }
-    if (millis() > led_timeout){
-      led_timeout = millis() + 1000;
-      led_active = ! led_active;
-      digitalWrite(pin, led_active);
-    }
-  }
-
-  void setupDebugPins(){
-    for (int j=0;j<8;j++){
-      pinMode(j, OUTPUT);
-    }
-  }
-
-  void setCDCActive(bool flag){
-    _cdc_active = flag;
-  }
-
  protected:
   int rh_port = 0;
   uint8_t _channels = 0;
   bool _is_active = false;
   bool _is_led_setup = true;
+  LEDDelay _led_delay_ms = LEDDelay::INACTIVE;
 
   // Audio controls
   bool _mute[AUDIO_USB_MAX_CHANNELS+1] = {false};       // +1 for master channel 0
@@ -211,8 +216,8 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   uint16_t _out_buffer_available = 0;
   uint16_t _in_buffer_available = 0;
 
-  bool led_active = false;
-  uint64_t led_timeout = 0;
+  bool _led_active = false;
+  uint64_t _led_timeout = 0;
 
   // persisted descriptor data
   uint8_t _itfnum_spk = 0, ep_mic = 0;
@@ -230,13 +235,21 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   size_t (*p_read_callback)(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref);
   Stream *p_stream = nullptr;
   Print *p_print = nullptr;
-  int append_pos = 0;
-  int desc_len = 0;
+  int _append_pos = 0;
+  int _desc_len = 0;
 
+  /// We can use 8 debug pins with a logic analyser
+  void setupDebugPins(){
+#if AUDIO_DEBUG
+    for (int j=0;j<8;j++){
+      pinMode(j, OUTPUT);
+    }
+#endif
+  }
 
   void append(uint8_t *to, uint8_t *str, int len){
-    if (to != nullptr) memcpy(to + append_pos, str, len);
-    append_pos += len;
+    if (to != nullptr) memcpy(to + _append_pos, str, len);
+    _append_pos += len;
   }
 
   bool isReadDefined() {

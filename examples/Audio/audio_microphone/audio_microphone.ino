@@ -53,4 +53,6 @@ void loop() {
   // Manual call tud_task since it isn't called by Core's background
   TinyUSBDevice.task();
   #endif
+  // use LED do display status
+  usb.updateLED();
 }

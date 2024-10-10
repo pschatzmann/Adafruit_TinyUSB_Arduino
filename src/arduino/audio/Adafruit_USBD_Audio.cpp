@@ -40,12 +40,17 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels, int bitsPerSam
     dev_desc.bDeviceProtocol = 1;
   }
 
-
-  if (rate > AUDIO_FREQ_MAX || rate < AUDIO_FREQ_MIN)
+  // check data
+  if (rate > AUDIO_FREQ_MAX || rate < AUDIO_FREQ_MIN){
+    setLEDDelay(LEDDelay::ERROR);
     return false;
-  if (channels > AUDIO_USB_MAX_CHANNELS)
+  }
+  if (channels > AUDIO_USB_MAX_CHANNELS){
+    setLEDDelay(LEDDelay::ERROR);
     return false;
+  }
   if (bitsPerSample > MAX_BITS_PER_SAMPLE){
+    setLEDDelay(LEDDelay::ERROR);
     return false;
   }
 
@@ -56,6 +61,7 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels, int bitsPerSam
   this->_channels = channels;
   _clk_is_valid = 1;
   _is_active = true;
+  setLEDDelay(LEDDelay::ACTIVE);
 
   //tud_init(rh_port);
   bool rc = TinyUSBDevice.addInterface(*this);
@@ -66,8 +72,32 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels, int bitsPerSam
 void Adafruit_USBD_Audio::end() {
   tud_deinit(rh_port);
   _is_active = false;
+  setLEDDelay(LEDDelay::INACTIVE);
   if (_out_buffer.size() > 0) _out_buffer.resize(0);
   if (_in_buffer.size() > 0) _out_buffer.resize(0);
+}
+
+/// Call from loop to blink led
+void Adafruit_USBD_Audio::updateLED(int pin){
+  if (_is_led_setup){
+    pinMode(pin, OUTPUT);
+    _is_led_setup = false;
+  }
+
+  // led must be active
+  if (_led_delay_ms != LEDDelay::INACTIVE && millis() > _led_timeout){
+    _led_timeout = millis() + (uint16_t)_led_delay_ms;
+    _led_active = ! _led_active;
+    digitalWrite(pin, _led_active);
+  }
+
+  // led is inactive
+  if (_led_delay_ms == LEDDelay::INACTIVE){
+    if (_led_active) {
+      _led_active = false;
+      digitalWrite(pin, _led_active);
+    }
+  }
 }
 
 //--------------------------------------------------------------------+
@@ -329,7 +359,7 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
 bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
                                               uint8_t ep_in,
                                               uint8_t cur_alt_setting) {
-  digitalWrite(2, HIGH);
+  debugWrite(2, HIGH);
   // (void)rhport;
   // (void)itf;
   // (void)ep_in;
@@ -337,7 +367,7 @@ bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
 
   // bill buffer from "microphone" input
   if (isReadDefined()) {
-    digitalWrite(2, HIGH);
+    debugWrite(2, HIGH);
     // manage buffer size
     uint16_t len = get_io_size() - 2; // CFG_TUD_AUDIO_EP_SZ_IN - 2; 
     if (_out_buffer.size() < len) _out_buffer.resize(len);
@@ -351,7 +381,7 @@ bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
     uint8_t *adr = &_out_buffer[0];
     memset(adr, 0, len);
     _out_buffer_available = (*p_read_callback)(adr, len, *this);
-    digitalWrite(2, LOW);
+    debugWrite(2, LOW);
   }
 
   return true;
@@ -369,11 +399,11 @@ bool Adafruit_USBD_Audio::tx_done_post_load_cb(uint8_t rhport,
 
   // output audio from "microphone" buffer to usb
   if (isReadDefined()) {
-    digitalWrite(1, HIGH);
+    debugWrite(1, HIGH);
     uint8_t *adr = &_out_buffer[0];
     tud_audio_write(adr, _out_buffer_available);
     _out_buffer_available = 0;
-    digitalWrite(1, LOW);
+    debugWrite(1, LOW);
   }
 
   return true;
@@ -383,7 +413,7 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint16_t n_bytes_received,
                                               uint8_t func_id, uint8_t ep_out,
                                               uint8_t cur_alt_setting) {
-  digitalWrite(3, HIGH);
+  debugWrite(3, HIGH);
   // // read audio from usb
   // if (isWriteDefined()) {
   //   uint16_t len = get_io_size();
@@ -400,7 +430,7 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
                                                uint16_t n_bytes_received,
                                                uint8_t func_id, uint8_t ep_out,
                                                uint8_t cur_alt_setting) {
-  digitalWrite(4, HIGH);
+  debugWrite(4, HIGH);
   // // read audio from usb
   // if (isWriteDefined()) {
   //   uint16_t len = get_io_size();
@@ -453,8 +483,8 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   }
 
   // if we know the len, we can return it
-  if (buf == nullptr && desc_len > 0){
-    return desc_len;
+  if (buf == nullptr && _desc_len > 0){
+    return _desc_len;
   }
 
   uint8_t feature_unit_len =   (6+(_channels+1)*4);
@@ -484,7 +514,7 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   }
 
   uint8_t _stridx = 0; //2;
-  append_pos = 0;
+  _append_pos = 0;
 
 
   /* Standard Interface Association Descriptor (IAD) */
@@ -622,11 +652,11 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   }
 
 
-  if (desc_len==0){
-    desc_len = append_pos;
+  if (_desc_len==0){
+    _desc_len = _append_pos;
   }
 
-  return desc_len;
+  return _desc_len;
 }
 
 // for speaker:

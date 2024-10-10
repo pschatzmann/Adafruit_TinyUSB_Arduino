@@ -51,4 +51,6 @@ void setup() {
 }
 
 void loop() {
+  // use LED do display status
+  usb.updateLED();
 }

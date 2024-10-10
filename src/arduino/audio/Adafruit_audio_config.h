@@ -28,12 +28,13 @@
 // for a start we support audio only on the Rasperry Pico
 #if defined(ARDUINO_ARCH_RP2040)
 
+#define AUDIO_DEBUG               false
+
 #define CFG_TUD_AUDIO             1
 #define AUDIO_USB_MAX_CHANNELS    2
 #define AUDIO_FREQ_MIN            8000
 #define AUDIO_FREQ_MAX            48000
 #define MAX_BITS_PER_SAMPLE       24
-
 // Unit numbers are arbitrary selected
 // Speaker path
 #define UAC2_ENTITY_SPK_CLOCK 0x04
