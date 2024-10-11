@@ -1,5 +1,5 @@
 
-Bus 001 Device 019: ID cafe:4010 TinyUSB TinyUSB Speaker
+Bus 001 Device 018: ID cafe:4010 TinyUSB TinyUSB Speaker
 Device Descriptor:
   bLength                18
   bDescriptorType         1

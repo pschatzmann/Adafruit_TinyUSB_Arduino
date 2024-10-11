@@ -240,8 +240,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   /// We can use 8 debug pins with a logic analyser
   void setupDebugPins();
 
-  void debugWriteN(int pin,int n, int delayUs=1);
-
   void append(uint8_t *to, uint8_t *str, int len){
     if (to != nullptr) memcpy(to + _append_pos, str, len);
     _append_pos += len;

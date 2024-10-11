@@ -171,12 +171,21 @@ bool Adafruit_USBD_Audio::set_req_entity_cb(
   audio_control_request_t const *request =
       (audio_control_request_t const *)p_request;
 
-  // for speaker
-  if (request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT)
-    return speaker_feature_unit_set_request(rhport, request, buf);
-  if (request->bEntityID == UAC2_ENTITY_SPK_CLOCK)
-    return speaker_clock_set_request(rhport, request, buf);
+  debugWrite(5, HIGH);
 
+  // for speaker
+  if (request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT){
+    bool rc = speaker_feature_unit_set_request(rhport, request, buf);
+    debugWrite(5, LOW);
+    return rc;
+  }
+  if (request->bEntityID == UAC2_ENTITY_SPK_CLOCK){
+    bool rc = speaker_clock_set_request(rhport, request, buf);
+    debugWrite(5, LOW);
+    return rc;
+  }
+
+  debugWrite(5, HIGH);
   TU_LOG1(
       "Set request not handled, entity = %d, selector = %d, request = %d\r\n",
       request->bEntityID, request->bControlSelector, request->bRequest);
@@ -232,58 +241,71 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
   audio_control_request_t const *request =
       (audio_control_request_t const *)p_request;
 
-  // for speaker
-  if (isSpeaker()) {
-    if (request->bEntityID == UAC2_ENTITY_SPK_CLOCK)
-      return speaker_clock_get_request(rhport, request);
-    if (request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT)
-      return speaker_feature_unit_get_request(rhport, request);
+  debugWrite(6, HIGH);
+
+  // Clock Source speaker
+  if (request->bEntityID == UAC2_ENTITY_SPK_CLOCK){
+    bool rc = speaker_clock_get_request(rhport, request);
+    if (rc) debugWrite(6, LOW);
+    return rc;
+  }
+  // Fueature unit speaker
+  if (request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT){
+    bool rc = speaker_feature_unit_get_request(rhport, request);  
+    if (rc) debugWrite(6, LOW);
+    return rc;
   }
 
-  if (isMicrophone()) {
-    // Feature unit
-    if (entityID == UAC2_ENTITY_MIC_FEATURE_UNIT)
-      return microphone_feature_unit_get_request(rhport, p_request);
+  // Clock Source mic
+  if (entityID == UAC2_ENTITY_MIC_CLOCK){
+    bool rc = microphone_clock_get_request(rhport, p_request);
+    if (rc) debugWrite(6, LOW);
+    return rc;
+  }
 
-    // Clock Source unit
-    if (entityID == UAC2_ENTITY_MIC_CLOCK)
-      return microphone_clock_get_request(rhport, p_request);
+  // Feature unit mic
+  if (entityID == UAC2_ENTITY_MIC_FEATURE_UNIT){
+    bool rc = microphone_feature_unit_get_request(rhport, p_request);
+    if (rc) debugWrite(6, LOW);
+    return rc;
+  }
 
     // Input terminal (Microphone input)
-    if (entityID == UAC2_ENTITY_MIC_INPUT_TERMINAL) {
-      switch (ctrlSel) {
-        case AUDIO_TE_CTRL_CONNECTOR: {
-          // The terminal connector control only has a get request with only the
-          // CUR attribute.
-          audio_desc_channel_cluster_t ret;
+  if (entityID == UAC2_ENTITY_MIC_INPUT_TERMINAL
+  || entityID == UAC2_ENTITY_SPK_INPUT_TERMINAL) {
+    switch (ctrlSel) {
+      case AUDIO_TE_CTRL_CONNECTOR: {
+        // The terminal connector control only has a get request with only the
+        // CUR attribute.
+        audio_desc_channel_cluster_t ret;
+        ret.bNrChannels = _channels;
+        ret.bmChannelConfig = (audio_channel_config_t)0;
+        ret.iChannelNames = 0;
 
-          // Those are dummy values for now
-          ret.bNrChannels = _channels;
-          ret.bmChannelConfig = (audio_channel_config_t)0;
-          ret.iChannelNames = 0;
+        TU_LOG2("    Get terminal connector\r\n");
 
-          TU_LOG2("    Get terminal connector\r\n");
+        bool rc = tud_audio_buffer_and_schedule_control_xfer(
+            rhport, p_request, (void *)&ret, sizeof(ret));
+        if (rc) debugWrite(6, LOW);
+        return rc;
+      } break;
 
-          return tud_audio_buffer_and_schedule_control_xfer(
-              rhport, p_request, (void *)&ret, sizeof(ret));
-        } break;
-
-          // Unknown/Unsupported control selector
-        default:
-          TU_BREAKPOINT();
-          return false;
-      }
+        // Unknown/Unsupported control selector
+      default:
+        TU_LOG2("  Unsupported selector: %d\r\n", entityID);
+        debugWrite(6, HIGH);
+        return false;
     }
   }
 
   TU_LOG2("  Unsupported entity: %d\r\n", entityID);
+  debugWrite(6, HIGH);
   return false;  // Yet not implemented
 }
 
 bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
                                               uint8_t ep_in,
                                               uint8_t cur_alt_setting) {
-  debugWrite(2, HIGH);
   // (void)rhport;
   // (void)itf;
   // (void)ep_in;
@@ -291,7 +313,7 @@ bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
 
   // fill buffer from "microphone" input
   if (isMicrophone()) {
-    debugWrite(2, HIGH);
+    debugWrite(1, HIGH);
     // manage buffer size
     uint16_t len = get_io_size() - 2;  // CFG_TUD_AUDIO_EP_SZ_IN - 2;
     if (_out_buffer.size() < len) _out_buffer.resize(len);
@@ -305,7 +327,7 @@ bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
     uint8_t *adr = &_out_buffer[0];
     memset(adr, 0, len);
     _out_buffer_available = (*p_read_callback)(adr, len, *this);
-    debugWrite(2, LOW);
+    debugWrite(1, LOW);
   }
 
   return true;
@@ -319,17 +341,15 @@ bool Adafruit_USBD_Audio::tx_done_post_load_cb(uint8_t rhport,
   (void)itf;
   (void)ep_in;
   (void)cur_alt_setting;
-  debugWrite(3, HIGH);
 
   // output audio from "microphone" buffer to usb
   if (isMicrophone()) {
-    debugWrite(1, HIGH);
+    debugWrite(2, HIGH);
     uint8_t *adr = &_out_buffer[0];
     tud_audio_write(adr, _out_buffer_available);
     _out_buffer_available = 0;
-    debugWrite(1, LOW);
+    debugWrite(2, LOW);
   }
-  debugWrite(3, LOW);
 
   return true;
 }
@@ -338,7 +358,7 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint16_t n_bytes_received,
                                               uint8_t func_id, uint8_t ep_out,
                                               uint8_t cur_alt_setting) {
-  debugWrite(4, HIGH);
+  debugWrite(3, HIGH);
   // // read audio from usb
   // if (isSpeaker()) {
   //   uint16_t len = get_io_size();
@@ -354,7 +374,7 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
                                                uint16_t n_bytes_received,
                                                uint8_t func_id, uint8_t ep_out,
                                                uint8_t cur_alt_setting) {
-  debugWrite(5, HIGH);
+  debugWrite(4, HIGH);
   // // read audio from usb
   // if (isSpeaker()) {
   //   uint16_t len = get_io_size();
@@ -377,8 +397,9 @@ bool Adafruit_USBD_Audio::set_itf_close_EP_cb(
   return true;
 }
 
+// calculate EP size based on dynamic variables
 uint16_t Adafruit_USBD_Audio::getMaxEPSize() {
-  return TUD_AUDIO_EP_SIZE(_sample_rate, _bits_per_sample / 8, _channels);
+  return TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE, _bits_per_sample / 8, _channels);
 }
 
 uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
@@ -416,18 +437,24 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   }
 
   if (isSpeaker() && _itfnum_spk==0) {
+#if defined(TUD_ENDPOINT_ONE_DIRECTION_ONLY)
     _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
     _ep_spk = TinyUSBDevice.allocEndpoint(false);
     _ep_fb = TinyUSBDevice.allocEndpoint(true);
+#else
+    _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
+    _ep_spk = TinyUSBDevice.allocEndpoint(false);
+    _ep_fb = _ep_spk | 0x80;
+#endif    
     _itf_number_total++;
     total_len += total_len_spk;
   }
 
-  uint8_t _stridx = 0; //2;
+  uint8_t _stridx = 4; //2;
   _append_pos = 0;
 
 
-#if DYNAMIC_SPK_DESC_
+#if DYNAMIC_SPK_DESCR
   /* Standard Interface Association Descriptor (IAD) */
   uint8_t d1[] = {TUD_AUDIO_DESC_IAD(/*_firstitfs*/ _itfnum_ctl, /*_nitfs*/ _itf_number_total, /*_stridx*/ 0)};
   append(buf, d1, sizeof(d1));
@@ -467,7 +494,7 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
         uint8_t df2[] = { U32_TO_U8S_LE(AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS) };
         append(buf, df2, sizeof(df2));
     }
-    uint8_t df3[1] = { _stridx };
+    uint8_t df3[1] = { 0x00 };
     append(buf, df3, sizeof(df3));
 
     /* Standard AS Interface Descriptor(4.9.1) */\
@@ -524,7 +551,8 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
         uint8_t df2[] = { U32_TO_U8S_LE(AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS) };
         append(buf, df2, sizeof(df2));
     }
-    uint8_t df3[1] = { _stridx };
+    /*_stridx 0x00*/ 
+    uint8_t df3[1] = { 0x00 };
     append(buf, df3, sizeof(df3));
 
     /* Standard AS Interface Descriptor(4.9.1) */\
@@ -557,14 +585,15 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
 
     // /* Standard AS Isochronous Feedback Endpoint Descriptor(4.10.2.1) */\
     // TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(/*_ep*/ _epfb, /*_epsize*/ _epfbsize, /*_interval*/ TUD_OPT_HIGH_SPEED ? 4 : 1)
-    uint8_t d21[] = {TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(/*_ep*/ _ep_fb, /*_epsize*/ 0X03, /*_interval*/ TUD_OPT_HIGH_SPEED ? 4 : 1)};
+    uint8_t d21[] = {TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(/*_ep*/ _ep_fb, /*_epsize*/ 0X04, /*_interval*/ TUD_OPT_HIGH_SPEED ? 4 : 1)};
     append(buf, d21, sizeof(d21));
   }
 #else
+  if (isMicrophone()) {
     // Interface number, string index, byte per sample, bit per sample, EP Out, EP size, EP feedback, feedback EP size,
-    uint8_t xx[] = {TUD_AUDIO_SPEAKER_STEREO_FB_DESCRIPTOR(0, 4, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX * 8, _itfnum_spk, CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX, _ep_fb, 3)};
+    uint8_t xx[] = {TUD_AUDIO_SPEAKER_STEREO_FB_DESCRIPTOR(0, 4, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX * 8, _itfnum_spk, CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX, _ep_fb, 4)};
     append(buf, xx, sizeof(xx));
-
+  } 
 #endif
 
   if (_desc_len==0){
@@ -644,7 +673,7 @@ bool Adafruit_USBD_Audio::microphone_clock_get_request(
 
         // Unknown/Unsupported control
         default:
-          TU_BREAKPOINT();
+          //TU_BREAKPOINT();
           return false;
       }
       break;
@@ -657,7 +686,7 @@ bool Adafruit_USBD_Audio::microphone_clock_get_request(
 
     // Unknown/Unsupported control
     default:
-      TU_BREAKPOINT();
+      //TU_BREAKPOINT();
       return false;
   }
 }
@@ -886,14 +915,14 @@ bool Adafruit_USBD_Audio::microphone_feature_unit_get_request(
 
           // Unknown/Unsupported control
         default:
-          TU_BREAKPOINT();
+          //TU_BREAKPOINT();
           return false;
       }
       break;
 
       // Unknown/Unsupported control
     default:
-      TU_BREAKPOINT();
+      //TU_BREAKPOINT();
       return false;
   }
   return false;
@@ -945,15 +974,5 @@ void Adafruit_USBD_Audio::setupDebugPins() {
 #endif
 }
 
-void Adafruit_USBD_Audio::debugWriteN(int pin, int n, int delayUs) {
-#if AUDIO_DEBUG
-  for (int j = 0; j < n; j++) {
-    debugWrite(pin, HIGH);
-    delayMicroseconds(delayUs);
-    debugWrite(pin, LOW);
-  }
-  delayMicroseconds(delayUs * 2);
-#endif
-}
 
 #endif

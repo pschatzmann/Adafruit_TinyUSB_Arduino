@@ -1,5 +1,5 @@
 
-Bus 001 Device 039: ID 239a:cafe Adafruit Pico
+Bus 001 Device 020: ID 239a:cafe Adafruit Pico
 Device Descriptor:
   bLength                18
   bDescriptorType         1
@@ -44,7 +44,7 @@ Device Descriptor:
       bInterfaceClass         1 Audio
       bInterfaceSubClass      1 Control Device
       bInterfaceProtocol     32 
-      iInterface              0 
+      iInterface              4 
       AudioControl Interface Descriptor:
         bLength                 9
         bDescriptorType        36
@@ -150,7 +150,7 @@ Device Descriptor:
           Transfer Type            Isochronous
           Synch Type               Asynchronous
           Usage Type               Data
-        wMaxPacketSize     0x00b8  1x 184 bytes
+        wMaxPacketSize     0x0184  1x 388 bytes
         bInterval               1
         AudioStreaming Endpoint Descriptor:
           bLength                 8
@@ -163,10 +163,10 @@ Device Descriptor:
       Endpoint Descriptor:
         bLength                 7
         bDescriptorType         5
-        bEndpointAddress     0x82  EP 2 IN
+        bEndpointAddress     0x81  EP 1 IN
         bmAttributes           17
           Transfer Type            Isochronous
           Synch Type               None
           Usage Type               Feedback
-        wMaxPacketSize     0x0003  1x 3 bytes
+        wMaxPacketSize     0x0004  1x 4 bytes
         bInterval               1

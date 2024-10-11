@@ -26,7 +26,7 @@
 #pragma once
 
 // for a start we support audio only on the Rasperry Pico
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_SAMD)
 
 #define CFG_TUD_AUDIO             1
 
@@ -75,25 +75,27 @@
 //--------------------------------------------------------------------
 
 // Have a look into audio_device.h for all configurations
-#define CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE              AUDIO_FREQ_MAX
+#define CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE              (AUDIO_FREQ_MAX*2)
 
 #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                 getUSBDAudioInterfaceDescriptorLength() 
 
 #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                 1
 #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ              64
 
-#define CFG_TUD_AUDIO_ENABLE_EP_OUT                   1
+// Microphone
 #define CFG_TUD_AUDIO_ENABLE_EP_IN                    1
 #define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX    2         // This value is not required by the driver, it parses this information from the descriptor once the alternate interface is set by the host - we use it for the setup
 #define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX            2         // This value is not required by the driver, it parses this information from the descriptor once the alternate interface is set by the host - we use it for the setup
 #define CFG_TUD_AUDIO_EP_SZ_IN                        TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX)
-
-
 #define CFG_TUD_AUDIO_EP_IN_FLOW_CONTROL              1
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX             CFG_TUD_AUDIO_EP_SZ_IN
-#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ          (TUD_OPT_HIGH_SPEED ? 32 : 4) * CFG_TUD_AUDIO_EP_SZ_IN // Example write FIFO every 1ms, so it should be 8 times larger for HS device
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ          (TUD_OPT_HIGH_SPEED ? 32 : 4) * CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX // Example write FIFO every 1ms, so it should be 8 times larger for HS device
 
 // Speaker
+#define CFG_TUD_AUDIO_ENABLE_EP_OUT                   1
+#define CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_RX    2         // This value is not required by the driver, it parses this information from the descriptor once the alternate interface is set by the host - we use it for the setup
+#define CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX            2         // This value is not required by the driver, it parses this information from the descriptor once the alternate interface is set by the host - we use it for the setup
+#define CFG_TUD_AUDIO_EP_SZ_OUT                       TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_RX, CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX)
 #define CFG_TUD_AUDIO_EP_OUT_FLOW_CONTROL             1
 #define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX            CFG_TUD_AUDIO_EP_SZ_OUT
 #define CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ         (TUD_OPT_HIGH_SPEED ? 32 : 4) * CFG_TUD_AUDIO_FUNC_1_EP_OUT_SZ_MAX // Example read FIFO every 1ms, so it should be 8 times larger for HS device
@@ -103,13 +105,11 @@
 // Enable feedback EP
 #define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP                             1
 
-
 //--------------------------------------------------------------------
 // Debugging and Testing
 //--------------------------------------------------------------------
-#define AUDIO_DEBUG               true
-#define DYNAMIC_SPK_DESC_         true
-#define EPNUM_AUDIO_OUT           1
+#define AUDIO_DEBUG               false
+#define DYNAMIC_SPK_DESCR         true
 
 //--------------------------------------------------------------------
 // Definitions
@@ -118,4 +118,4 @@
 extern int getUSBDAudioInterfaceDescriptorLength();
 
 
-#endif // ARDUINO_ARCH_RP2040
+#endif // ARDUINO_ARCH_*
