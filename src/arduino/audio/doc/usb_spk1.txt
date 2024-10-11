@@ -1,5 +1,5 @@
 
-Bus 001 Device 020: ID 239a:cafe Adafruit Pico
+Bus 001 Device 060: ID 239a:cafe Adafruit Pico
 Device Descriptor:
   bLength                18
   bDescriptorType         1
@@ -13,7 +13,7 @@ Device Descriptor:
   bcdDevice            1.00
   iManufacturer           1 Raspberry Pi
   iProduct                2 Pico
-  iSerial                 3 E66130100F728A38
+  iSerial                 3 E66038B713438F30
   bNumConfigurations      1
   Configuration Descriptor:
     bLength                 9
@@ -57,20 +57,20 @@ Device Descriptor:
         bLength                 8
         bDescriptorType        36
         bDescriptorSubtype     10 (CLOCK_SOURCE)
-        bClockID                4
+        bClockID               24
         bmAttributes            3 Internal programmable clock 
         bmControls           0x03
           Clock Frequency Control (read/write)
-        bAssocTerminal          1
+        bAssocTerminal         21
         iClockSource            0 
       AudioControl Interface Descriptor:
         bLength                17
         bDescriptorType        36
         bDescriptorSubtype      2 (INPUT_TERMINAL)
-        bTerminalID             1
+        bTerminalID            21
         wTerminalType      0x0101 USB Streaming
         bAssocTerminal          0
-        bCSourceID              4
+        bCSourceID             24
         bNrChannels             2
         bmChannelConfig    0x00000000
         iChannelNames           0 
@@ -80,19 +80,19 @@ Device Descriptor:
         bLength                12
         bDescriptorType        36
         bDescriptorSubtype      3 (OUTPUT_TERMINAL)
-        bTerminalID             3
+        bTerminalID            23
         wTerminalType      0x0304 Desktop Speaker
-        bAssocTerminal          1
-        bSourceID               2
-        bCSourceID              4
+        bAssocTerminal         21
+        bSourceID              22
+        bCSourceID             24
         bmControls         0x0000
         iTerminal               0 
       AudioControl Interface Descriptor:
         bLength                18
         bDescriptorType        36
         bDescriptorSubtype      6 (FEATURE_UNIT)
-        bUnitID                 2
-        bSourceID               1
+        bUnitID                22
+        bSourceID              21
         bmaControls(0)     0x0000000f
           Mute Control (read/write)
           Volume Control (read/write)
@@ -127,7 +127,7 @@ Device Descriptor:
         bLength                16
         bDescriptorType        36
         bDescriptorSubtype      1 (AS_GENERAL)
-        bTerminalLink           1
+        bTerminalLink          21
         bmControls           0x00
         bFormatType             1
         bmFormats          0x00000001

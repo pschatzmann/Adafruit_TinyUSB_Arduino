@@ -24,7 +24,7 @@
 
 #include "Adafruit_USBD_Audio.h"
 
-#if CFG_TUD_AUDIO
+#if CFG_TUD_ENABLED && CFG_TUD_AUDIO
 
 Adafruit_USBD_Audio *self_Adafruit_USBD_Audio = nullptr;
 

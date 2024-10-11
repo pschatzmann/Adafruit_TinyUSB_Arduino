@@ -38,7 +38,7 @@
 # define debugWrite(pin, active)
 #endif
 
-// Reference to audio
+// Reference to audio: TODO multiple instances
 class Adafruit_USBD_Audio;
 extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
