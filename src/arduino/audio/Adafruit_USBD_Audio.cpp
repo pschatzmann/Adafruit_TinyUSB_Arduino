@@ -361,7 +361,7 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint16_t n_bytes_received,
                                               uint8_t func_id, uint8_t ep_out,
                                               uint8_t cur_alt_setting) {
-  // read audio from usb
+  //read audio from usb
   if (isSpeaker() && _in_buffer_available == 0) {
     debugWrite(3, HIGH);
     uint16_t len = tud_audio_available();
@@ -373,7 +373,7 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
     debugWrite(3, LOW);
     return true;
   }
-  return false;
+  return true;
 }
 
 bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
@@ -444,15 +444,9 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   }
 
   if (isSpeaker() && _itfnum_spk==0) {
-#if defined(TUD_ENDPOINT_ONE_DIRECTION_ONLY)
     _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
     _ep_spk = TinyUSBDevice.allocEndpoint(false);
     _ep_fb = TinyUSBDevice.allocEndpoint(true);
-#else
-    _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
-    _ep_spk = TinyUSBDevice.allocEndpoint(false);
-    _ep_fb = _ep_spk | 0x80;
-#endif    
     _itf_number_total++;
     total_len += total_len_spk;
   }
@@ -461,7 +455,6 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   _append_pos = 0;
 
 
-#if DYNAMIC_SPK_DESCR
   /* Standard Interface Association Descriptor (IAD) */
   uint8_t d1[] = {TUD_AUDIO_DESC_IAD(/*_firstitfs*/ _itfnum_ctl, /*_nitfs*/ _itf_number_total, /*_stridx*/ 0)};
   append(buf, d1, sizeof(d1));
@@ -595,13 +588,6 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
     uint8_t d21[] = {TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(/*_ep*/ _ep_fb, /*_epsize*/ 0X04, /*_interval*/ TUD_OPT_HIGH_SPEED ? 4 : 1)};
     append(buf, d21, sizeof(d21));
   }
-#else
-  if (isMicrophone()) {
-    // Interface number, string index, byte per sample, bit per sample, EP Out, EP size, EP feedback, feedback EP size,
-    uint8_t xx[] = {TUD_AUDIO_SPEAKER_STEREO_FB_DESCRIPTOR(0, 4, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_N_BYTES_PER_SAMPLE_TX * 8, _itfnum_spk, CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX, _ep_fb, 4)};
-    append(buf, xx, sizeof(xx));
-  } 
-#endif
 
   if (_desc_len==0){
     _desc_len = _append_pos;

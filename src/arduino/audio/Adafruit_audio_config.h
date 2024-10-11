@@ -109,7 +109,6 @@
 // Debugging and Testing
 //--------------------------------------------------------------------
 #define AUDIO_DEBUG               false
-#define DYNAMIC_SPK_DESCR         true
 
 //--------------------------------------------------------------------
 // Definitions
