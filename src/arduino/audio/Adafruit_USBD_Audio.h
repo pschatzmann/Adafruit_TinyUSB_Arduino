@@ -43,7 +43,7 @@ class Adafruit_USBD_Audio;
 extern Adafruit_USBD_Audio *self_Adafruit_USBD_Audio;
 
 // LED delays 
-enum class LEDDelay { INACTIVE=0, PLAYING=2000,ACTIVE=1000, ERROR=500};
+enum class LEDDelay { INACTIVE=0, ERROR=500, PLAYING=1000,ACTIVE=2000 };
 
 
 /***
