@@ -110,7 +110,6 @@ public:
   void setSerialDescriptor(const char *s);
   uint8_t getSerialDescriptor(uint16_t *serial_utf16);
   uint8_t addStringDescriptor(const char *s);
-  tusb_desc_device_t& getDeviceDescriptor() {return _desc_device;}
   //------------- Control -------------//
 
   bool begin(uint8_t rhport = 0);

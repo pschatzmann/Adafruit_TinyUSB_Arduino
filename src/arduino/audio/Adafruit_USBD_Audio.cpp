@@ -33,10 +33,6 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
                                 int bitsPerSample) {
   if (!_cdc_active) {
     TinyUSBDevice.clearConfiguration();
-    tusb_desc_device_t &dev_desc = TinyUSBDevice.getDeviceDescriptor();
-    dev_desc.bDeviceClass = 239;
-    dev_desc.bDeviceSubClass = 2;
-    dev_desc.bDeviceProtocol = 1;
   }
 
   // check data
