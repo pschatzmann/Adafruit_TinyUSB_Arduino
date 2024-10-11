@@ -366,12 +366,14 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint8_t func_id, uint8_t ep_out,
                                               uint8_t cur_alt_setting) {
   // read audio from usb
-  if (isSpeaker() && _in_buffer_available==0) {
+  if (isSpeaker() && _in_buffer_available == 0) {
     debugWrite(3, HIGH);
-    uint16_t len = get_io_size();
-    if (_in_buffer.size() < len) _in_buffer.resize(len);
-    uint8_t *adr = &_in_buffer[0];
-    _in_buffer_available = tud_audio_read(adr, len);
+    uint16_t len = tud_audio_available();
+    if (len > 0) {
+      if (_in_buffer.size() < len) _in_buffer.resize(len);
+      uint8_t *adr = &_in_buffer[0];
+      _in_buffer_available = tud_audio_read(adr, len);
+    }
     debugWrite(3, LOW);
     return true;
   }
@@ -392,9 +394,8 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
       memmove(adr, adr+rc, _in_buffer_available);
     }
     debugWrite(4, LOW);
-    return true;
   }
-  return false;
+  return true;
 }
 
 bool Adafruit_USBD_Audio::set_itf_close_EP_cb(
