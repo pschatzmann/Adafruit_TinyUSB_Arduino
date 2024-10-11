@@ -52,6 +52,14 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
     setLEDDelay(LEDDelay::ERROR);
     return false;
   }
+  if (isMicrophone() && isSpeaker()){
+    setLEDDelay(LEDDelay::ERROR);
+    return false;
+  }
+  if (!isMicrophone() && !isSpeaker()){
+    setLEDDelay(LEDDelay::ERROR);
+    return false;
+  }
 
   // init device stack on configured roothub port
   // Init values
@@ -62,14 +70,13 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
   _is_active = true;
   setLEDDelay(LEDDelay::ACTIVE);
 
-  // tud_init(rh_port);
   bool rc = TinyUSBDevice.addInterface(*this);
 
   return rc;
 }
 
 void Adafruit_USBD_Audio::end() {
-  tud_deinit(rh_port);
+  tud_deinit(_rh_port);
   _is_active = false;
   setLEDDelay(LEDDelay::INACTIVE);
   if (_out_buffer.size() > 0) _out_buffer.resize(0);
@@ -231,7 +238,7 @@ bool Adafruit_USBD_Audio::get_req_itf_cb(
 // Invoked when audio class specific get request received for an entity
 bool Adafruit_USBD_Audio::get_req_entity_cb(
     uint8_t rhport, tusb_control_request_t const *p_request) {
-  (void)rhport;
+  _rh_port = rhport;
   // Page 91 in UAC2 specification
   uint8_t channelNum = TU_U16_LOW(p_request->wValue);
   uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
@@ -358,9 +365,9 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint16_t n_bytes_received,
                                               uint8_t func_id, uint8_t ep_out,
                                               uint8_t cur_alt_setting) {
-  debugWrite(3, HIGH);
-  // // read audio from usb
+  // read audio from usb
   if (isSpeaker() && _in_buffer_available==0) {
+    debugWrite(3, HIGH);
     uint16_t len = get_io_size();
     if (_in_buffer.size() < len) _in_buffer.resize(len);
     uint8_t *adr = &_in_buffer[0];
@@ -375,13 +382,13 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
                                                uint16_t n_bytes_received,
                                                uint8_t func_id, uint8_t ep_out,
                                                uint8_t cur_alt_setting) {
-  debugWrite(4, HIGH);
-  // // read audio from usb
+  // read audio from usb
   if (isSpeaker() && _in_buffer_available > 0) {
+    debugWrite(4, HIGH);
     uint8_t *adr = &_in_buffer[0];
     size_t rc = p_write_callback(adr, _in_buffer_available, *this);
     _in_buffer_available -= rc;
-    if (_in_buffer_available>0){
+    if (_in_buffer_available > 0){
       memmove(adr, adr+rc, _in_buffer_available);
     }
     debugWrite(4, LOW);

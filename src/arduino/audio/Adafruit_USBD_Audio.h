@@ -195,15 +195,15 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
 
 
  protected:
-  int rh_port = 0;
+  int _rh_port = 0;
   uint8_t _channels = 0;
   bool _is_active = false;
   bool _is_led_setup = true;
   LEDDelay _led_delay_ms = LEDDelay::INACTIVE;
 
   // Audio controls
-  bool _mute[AUDIO_USB_MAX_CHANNELS+1] = {false};       // +1 for master channel 0
-  uint16_t _volume[AUDIO_USB_MAX_CHANNELS+1] = {0};  // +1 for master channel 0
+  bool _mute[AUDIO_USB_MAX_CHANNELS+1] = {false};    // +1 for master channel 0
+  uint16_t _volume[AUDIO_USB_MAX_CHANNELS+1] = {100};  // +1 for master channel 0
   // Current states
   uint32_t _sample_rate;
   uint8_t _bits_per_sample;
