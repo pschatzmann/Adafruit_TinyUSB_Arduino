@@ -13,6 +13,7 @@
 #include "Adafruit_TinyUSB.h"
 
 Adafruit_USBD_Audio usb;
+size_t sample_count = 0;
 
 size_t readCB(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
   int16_t* data16 = (int16_t*)data;
@@ -23,6 +24,7 @@ size_t readCB(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
     data16[j] = random(-32000, 32000);
     data16[j+1] = random(-32000, 32000);;
     result += sizeof(int16_t)*2;
+    sample_count += 2;
   }
   return result;
 }
@@ -54,5 +56,10 @@ void loop() {
   TinyUSBDevice.task();
   #endif
   // use LED do display status
-  usb.updateLED();
+  if (usb.updateLED()){
+    Serial.print("Total samples: ");
+    Serial.print(sample_count);
+    Serial.print(" / Sample rate: ");
+    Serial.println(usb.rate());
+  }
 }

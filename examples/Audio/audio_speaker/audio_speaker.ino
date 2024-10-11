@@ -14,19 +14,13 @@
 #include "Adafruit_TinyUSB.h"
 
 Adafruit_USBD_Audio usb;
+size_t sample_count = 0;
 
 size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
   int16_t* data16 = (int16_t*)data;
   size_t samples = len / sizeof(int16_t);
-  size_t result = 0;
-  // print received data to serial
-  for (int j = 0; j < samples; j+=2) {
-    Serial.print(data16[j]);
-    Serial.print(",");
-    Serial.println(data16[j+1]);
-    result += sizeof(int16_t)*2;
-  }
-  return result;
+  sample_count += samples;
+  return len;
 }
 
 void setup() {
@@ -34,6 +28,7 @@ void setup() {
   if (!TinyUSBDevice.isInitialized()) {
     TinyUSBDevice.begin(0);
   }
+  
   Serial.begin(115200);
 
   // Start USB device as Audio Sink
@@ -56,5 +51,10 @@ void loop() {
   #endif
 
   // use LED do display status
-  usb.updateLED();
+  if (usb.updateLED()){
+    Serial.print("Total samples: ");
+    Serial.print(sample_count);
+    Serial.print(" / Sample rate: ");
+    Serial.println(usb.rate());
+  }
 }
