@@ -99,14 +99,15 @@ extern "C" {
 #ifndef CFG_TUD_VIDEO
 #define CFG_TUD_VIDEO 1 // number of video control interfaces
 #endif
-//ps
+// audio support: potentially platform dependent
+#ifndef CFG_TUD_AUDIO
+#include "arduino/audio/Adafruit_audio_config.h"
+#endif
+
 #ifndef CFG_TUD_VIDEO_STREAMING
 #define CFG_TUD_VIDEO_STREAMING 1 // number of video streaming interfaces
 #endif
 
-#ifndef CFG_TUD_AUDIO
-#include "arduino/audio/Adafruit_audio_config.h"
-#endif
 
 // video streaming endpoint buffer size
 #define CFG_TUD_VIDEO_STREAMING_EP_BUFSIZE 256
