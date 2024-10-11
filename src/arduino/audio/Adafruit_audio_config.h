@@ -41,16 +41,16 @@
 //--------------------------------------------------------------------
 
 // Speaker path
-#define UAC2_ENTITY_SPK_CLOCK 0x04
-#define UAC2_ENTITY_SPK_INPUT_TERMINAL 0x01
-#define UAC2_ENTITY_SPK_FEATURE_UNIT 0x02
-#define UAC2_ENTITY_SPK_OUTPUT_TERMINAL 0x03
+#define UAC2_ENTITY_SPK_INPUT_TERMINAL 0x15
+#define UAC2_ENTITY_SPK_FEATURE_UNIT 0x16
+#define UAC2_ENTITY_SPK_OUTPUT_TERMINAL 0x17
+#define UAC2_ENTITY_SPK_CLOCK 0x18
 
 // Microphone path
-#define UAC2_ENTITY_MIC_CLOCK 0x14
 #define UAC2_ENTITY_MIC_INPUT_TERMINAL 0x11
 #define UAC2_ENTITY_MIC_FEATURE_UNIT 0x12
 #define UAC2_ENTITY_MIC_OUTPUT_TERMINAL 0x13
+#define UAC2_ENTITY_MIC_CLOCK 0x14
 
 
 //--------------------------------------------------------------------

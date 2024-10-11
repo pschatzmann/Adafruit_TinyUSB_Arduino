@@ -360,14 +360,15 @@ bool Adafruit_USBD_Audio::rx_done_pre_read_cb(uint8_t rhport,
                                               uint8_t cur_alt_setting) {
   debugWrite(3, HIGH);
   // // read audio from usb
-  // if (isSpeaker()) {
-  //   uint16_t len = get_io_size();
-  //   if (_in_buffer.size() < len) _in_buffer.resize(len);
-  //   uint8_t *adr = &_in_buffer[0];
-  //   uint16_t len_read = tud_audio_read(adr, len);
-  //   return true;
-  // }
-  return true;
+  if (isSpeaker() && _in_buffer_available==0) {
+    uint16_t len = get_io_size();
+    if (_in_buffer.size() < len) _in_buffer.resize(len);
+    uint8_t *adr = &_in_buffer[0];
+    _in_buffer_available = tud_audio_read(adr, len);
+    debugWrite(3, LOW);
+    return true;
+  }
+  return false;
 }
 
 bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
@@ -376,15 +377,17 @@ bool Adafruit_USBD_Audio::rx_done_post_read_cb(uint8_t rhport,
                                                uint8_t cur_alt_setting) {
   debugWrite(4, HIGH);
   // // read audio from usb
-  // if (isSpeaker()) {
-  //   uint16_t len = get_io_size();
-  //   uint8_t *adr = &_in_buffer[0];
-  //   //size_t rc = p_write_callback(adr, len, *this);
-  //   // we assume a blocking write
-  //   //assert(rc == len);
-  //   //return true;
-  // }
-  return true;
+  if (isSpeaker() && _in_buffer_available > 0) {
+    uint8_t *adr = &_in_buffer[0];
+    size_t rc = p_write_callback(adr, _in_buffer_available, *this);
+    _in_buffer_available -= rc;
+    if (_in_buffer_available>0){
+      memmove(adr, adr+rc, _in_buffer_available);
+    }
+    debugWrite(4, LOW);
+    return true;
+  }
+  return false;
 }
 
 bool Adafruit_USBD_Audio::set_itf_close_EP_cb(
@@ -717,8 +720,6 @@ bool Adafruit_USBD_Audio::speaker_clock_set_request(
 #if CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP
 void Adafruit_USBD_Audio::feedback_params_cb(
     uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t *feedback_param) {
-  return self_Adafruit_USBD_Audio->feedback_params_cb(func_id, alt_itf,
-                                                      feedback_param);
   (void)func_id;
   (void)alt_itf;
   // Set feedback method to fifo counting
@@ -733,6 +734,7 @@ void Adafruit_USBD_Audio::feedback_params_cb(
 
 bool tud_audio_set_itf_cb(uint8_t rhport,
                           tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->set_itf_cb(rhport, p_request);
 }
 
@@ -740,6 +742,7 @@ bool tud_audio_set_itf_cb(uint8_t rhport,
 bool tud_audio_set_req_ep_cb(uint8_t rhport,
                              tusb_control_request_t const *p_request,
                              uint8_t *pBuff) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->set_req_ep_cb(rhport, p_request, pBuff);
 }
 
@@ -747,6 +750,7 @@ bool tud_audio_set_req_ep_cb(uint8_t rhport,
 bool tud_audio_set_req_itf_cb(uint8_t rhport,
                               tusb_control_request_t const *p_request,
                               uint8_t *pBuff) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->set_req_itf_cb(rhport, p_request, pBuff);
 }
 
@@ -754,28 +758,33 @@ bool tud_audio_set_req_itf_cb(uint8_t rhport,
 bool tud_audio_set_req_entity_cb(uint8_t rhport,
                                  tusb_control_request_t const *p_request,
                                  uint8_t *pBuff) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->set_req_entity_cb(rhport, p_request, pBuff);
 }
 // Invoked when audio class specific get request received for an EP
 bool tud_audio_get_req_ep_cb(uint8_t rhport,
                              tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->get_req_ep_cb(rhport, p_request);
 }
 
 // Invoked when audio class specific get request received for an interface
 bool tud_audio_get_req_itf_cb(uint8_t rhport,
                               tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->get_req_itf_cb(rhport, p_request);
 }
 
 // Invoked when audio class specific get request received for an entity
 bool tud_audio_get_req_entity_cb(uint8_t rhport,
                                  tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->get_req_entity_cb(rhport, p_request);
 }
 
 bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in,
                                    uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->tx_done_pre_load_cb(rhport, itf, ep_in,
                                                        cur_alt_setting);
 }
@@ -783,6 +792,7 @@ bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in,
 bool tud_audio_tx_done_post_load_cb(uint8_t rhport, uint16_t n_bytes_copied,
                                     uint8_t itf, uint8_t ep_in,
                                     uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->tx_done_post_load_cb(
       rhport, n_bytes_copied, itf, ep_in, cur_alt_setting);
 }
@@ -790,6 +800,7 @@ bool tud_audio_tx_done_post_load_cb(uint8_t rhport, uint16_t n_bytes_copied,
 bool tud_audio_rx_done_pre_read_cb(uint8_t rhport, uint16_t n_bytes_received,
                                    uint8_t func_id, uint8_t ep_out,
                                    uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->rx_done_pre_read_cb(
       rhport, n_bytes_received, func_id, ep_out, cur_alt_setting);
 }
@@ -797,16 +808,19 @@ bool tud_audio_rx_done_pre_read_cb(uint8_t rhport, uint16_t n_bytes_received,
 bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received,
                                     uint8_t func_id, uint8_t ep_out,
                                     uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->rx_done_post_read_cb(
       rhport, n_bytes_received, func_id, ep_out, cur_alt_setting);
 }
 
 bool tud_audio_set_itf_close_EP_cb(uint8_t rhport,
                                    tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
   return self_Adafruit_USBD_Audio->set_itf_close_EP_cb(rhport, p_request);
 }
 
 int getUSBDAudioInterfaceDescriptorLength() {
+  if (self_Adafruit_USBD_Audio==nullptr) return 0;
   return self_Adafruit_USBD_Audio->getInterfaceDescriptorLength();
 }
 
@@ -818,8 +832,9 @@ int getUSBDAudioInterfaceDescriptorLength() {
 
 void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf,
                                   audio_feedback_params_t *feedback_param) {
-  return self_Adafruit_USBD_Audio->feedback_params_cb(func_id, alt_itf,
-                                                      feedback_param);
+  if (self_Adafruit_USBD_Audio != nullptr){
+      self_Adafruit_USBD_Audio->feedback_params_cb(func_id, alt_itf, feedback_param);
+  } 
 }
 
 #endif
@@ -837,11 +852,6 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_get_request(
         rhport, (tusb_control_request_t const *)request, &mute1, sizeof(mute1));
   } else if (request->bControlSelector == AUDIO_FU_CTRL_VOLUME) {
     if (request->bRequest == AUDIO_CS_REQ_RANGE) {
-      // audio_control_range_2_n_t(1) range_vol = {
-      //   .wNumSubRanges = tu_htole16(1),
-      //   .subrange[0] = { .bMin = tu_htole16(-VOLUME_CTRL_50_DB),
-      //   tu_htole16(VOLUME_CTRL_0_DB), tu_htole16(256) }
-      // };
       audio_control_range_2_n_t(1) range_vol = {
           .wNumSubRanges = tu_htole16(1),
       };
