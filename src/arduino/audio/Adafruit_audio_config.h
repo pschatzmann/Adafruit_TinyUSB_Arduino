@@ -33,10 +33,30 @@
 #ifndef CDC_DEFAULT_ACTIVE
 #  define CDC_DEFAULT_ACTIVE        true
 #endif
-#define AUDIO_USB_MAX_CHANNELS    2
-#define AUDIO_FREQ_MIN            8000
-#define AUDIO_FREQ_MAX            48000
-#define MAX_BITS_PER_SAMPLE       24
+#ifndef AUDIO_USB_MAX_CHANNELS
+#  define AUDIO_USB_MAX_CHANNELS    2
+#endif
+#ifndef AUDIO_FREQ_MIN
+#  define AUDIO_FREQ_MIN            8000
+#endif
+#ifndef AUDIO_FREQ_MAX
+#  define AUDIO_FREQ_MAX            48000
+#endif
+#ifndef MAX_BITS_PER_SAMPLE
+#  define MAX_BITS_PER_SAMPLE       32
+#endif
+
+//--------------------------------------------------------------------
+// Debugging Logging and Testing
+//--------------------------------------------------------------------
+#define AUDIO_LOG(...)              {char msg[160]; snprintf(msg, 160, __VA_ARGS__); LOG_AUDIO_OUTPUT.println(msg);}
+#define AUDIO_NO_LOG(...)
+
+#define LOG_AUDIO_OUTPUT            Serial
+#define AUDIO_DEBUG                 false
+#define LOG_AUDIO_ERROR             AUDIO_LOG
+#define LOG_AUDIO_DEBUG             AUDIO_LOG      
+
 
 //--------------------------------------------------------------------
 // Unit numbers are arbitrary selected
@@ -53,24 +73,6 @@
 #define UAC2_ENTITY_MIC_FEATURE_UNIT 0x12
 #define UAC2_ENTITY_MIC_OUTPUT_TERMINAL 0x13
 #define UAC2_ENTITY_MIC_CLOCK 0x14
-
-
-//--------------------------------------------------------------------
-// Global discovery functions used by driver
-//--------------------------------------------------------------------
-
-// // Look at /proc/asound/<device>/stream0 to verify the USB settings
-#ifndef CFG_TUSB_MEM_ALIGN
-#define CFG_TUSB_MEM_ALIGN        __attribute__ ((aligned(4)))
-#endif
-
-//--------------------------------------------------------------------
-// DEVICE CONFIGURATION
-//--------------------------------------------------------------------
-
-#ifndef CFG_TUD_ENDPOINT0_SIZE
-#define CFG_TUD_ENDPOINT0_SIZE    64
-#endif
 
 //--------------------------------------------------------------------
 // AUDIO CLASS DRIVER CONFIGURATION
@@ -107,15 +109,6 @@
 // Enable feedback EP
 #define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP                             1
 
-//--------------------------------------------------------------------
-// Debugging Logging and Testing
-//--------------------------------------------------------------------
-#define LOG_AUDIO_OUTPUT            Serial
-#define AUDIO_LOG(...)              {char msg[160]; snprintf(msg, 160, __VA_ARGS__); LOG_AUDIO_OUTPUT.println(msg);}
-#define AUDIO_NO_LOG(...)
-#define AUDIO_DEBUG                 false
-#define LOG_AUDIO_ERROR             AUDIO_LOG
-#define LOG_AUDIO_DEBUG             AUDIO_LOG      
 
 //--------------------------------------------------------------------
 // Definitions
