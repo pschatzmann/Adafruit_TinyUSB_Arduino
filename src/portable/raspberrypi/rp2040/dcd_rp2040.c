@@ -46,8 +46,12 @@
 /* Low level controller
  *------------------------------------------------------------------*/
 
-//#define usb_hw_set hw_set_alias(usb_hw)
-//#define usb_hw_clear hw_clear_alias(usb_hw)
+#ifndef usb_hw_set
+#  define usb_hw_set hw_set_alias(usb_hw)
+#endif
+#ifndef usb_hw_set
+#  define usb_hw_set hw_clear_alias(usb_hw)
+#endif
 
 // Init these in dcd_init
 static uint64_t dpram_state; // 64bit resprents 64 blocks
