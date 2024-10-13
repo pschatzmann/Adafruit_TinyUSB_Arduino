@@ -30,7 +30,9 @@
 
 #define CFG_TUD_AUDIO             1
 
-#define CDC_DEFAULT_ACTIVE        true
+#ifndef CDC_DEFAULT_ACTIVE
+#  define CDC_DEFAULT_ACTIVE        true
+#endif
 #define AUDIO_USB_MAX_CHANNELS    2
 #define AUDIO_FREQ_MIN            8000
 #define AUDIO_FREQ_MAX            48000
@@ -109,7 +111,6 @@
 // Debugging and Testing
 //--------------------------------------------------------------------
 #define AUDIO_DEBUG               false
-
 //--------------------------------------------------------------------
 // Definitions
 //--------------------------------------------------------------------

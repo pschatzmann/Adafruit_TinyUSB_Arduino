@@ -133,7 +133,7 @@ bool Adafruit_USBD_Audio::set_req_ep_cb(uint8_t rhport,
   (void)pBuff;
 
   // We do not support any set range requests here, only current value requests
-  // TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
+  TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
 
   // Page 91 in UAC2 specification
   uint8_t channelNum = TU_U16_LOW(p_request->wValue);
@@ -154,7 +154,7 @@ bool Adafruit_USBD_Audio::set_req_itf_cb(
   (void)pBuff;
 
   // We do not support any set range requests here, only current value requests
-  // TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
+  TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
 
   // Page 91 in UAC2 specification
   uint8_t channelNum = TU_U16_LOW(p_request->wValue);
@@ -696,10 +696,10 @@ bool Adafruit_USBD_Audio::speaker_clock_set_request(
   (void)rhport;
 
   // TU_ASSERT(request->bEntityID == UAC2_ENTITY_SPK_CLOCK);
-  // TU_VERIFY(request->bRequest == AUDIO_CS_REQ_CUR);
+  TU_VERIFY(request->bRequest == AUDIO_CS_REQ_CUR);
 
   if (request->bControlSelector == AUDIO_CS_CTRL_SAM_FREQ) {
-    // TU_VERIFY(request->wLength == sizeof(audio_control_cur_4_t));
+    TU_VERIFY(request->wLength == sizeof(audio_control_cur_4_t));
     _sample_rate = (uint32_t)((audio_control_cur_4_t const *)buf)->bCur;
     TU_LOG2("Clock set current freq: %ld\r\n", _sample_rate);
     return true;
@@ -940,10 +940,10 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_set_request(
   (void)rhport;
 
   // TU_ASSERT(request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT);
-  // TU_VERIFY(request->bRequest == AUDIO_CS_REQ_CUR);
+  TU_VERIFY(request->bRequest == AUDIO_CS_REQ_CUR);
 
   if (request->bControlSelector == AUDIO_FU_CTRL_MUTE) {
-    // TU_VERIFY(request->wLength == sizeof(audio_control_cur_1_t));
+    TU_VERIFY(request->wLength == sizeof(audio_control_cur_1_t));
 
     _mute[request->bChannelNumber] = ((audio_control_cur_1_t const *)buf)->bCur;
 
@@ -952,7 +952,7 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_set_request(
 
     return true;
   } else if (request->bControlSelector == AUDIO_FU_CTRL_VOLUME) {
-    // TU_VERIFY(request->wLength == sizeof(audio_control_cur_2_t));
+    TU_VERIFY(request->wLength == sizeof(audio_control_cur_2_t));
 
     _volume[request->bChannelNumber] =
         ((audio_control_cur_2_t const *)buf)->bCur;
