@@ -108,14 +108,19 @@
 #define CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP                             1
 
 //--------------------------------------------------------------------
-// Debugging and Testing
+// Debugging Logging and Testing
 //--------------------------------------------------------------------
-#define AUDIO_DEBUG               false
+#define LOG_AUDIO_OUTPUT            Serial
+#define AUDIO_LOG(...)              {char msg[160]; snprintf(msg, 160, __VA_ARGS__); LOG_AUDIO_OUTPUT.println(msg);}
+#define AUDIO_NO_LOG(...)
+#define AUDIO_DEBUG                 false
+#define LOG_AUDIO_ERROR             AUDIO_LOG
+#define LOG_AUDIO_DEBUG             AUDIO_LOG      
+
 //--------------------------------------------------------------------
 // Definitions
 //--------------------------------------------------------------------
 // hack to make CFG_TUD_AUDIO_FUNC_1_DESC_LEN dynamic
 extern int getUSBDAudioInterfaceDescriptorLength();
-
 
 #endif // ARDUINO_ARCH_*

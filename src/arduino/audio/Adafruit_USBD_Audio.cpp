@@ -37,27 +37,27 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
 
   // check data
   if (rate > AUDIO_FREQ_MAX || rate < AUDIO_FREQ_MIN) {
-    TU_LOG1("Invalid sample rate %d: must be in range %d - %d\r\n",rate, AUDIO_FREQ_MIN, AUDIO_FREQ_MAX);
+    LOG_AUDIO_DEBUG("Invalid sample rate %d: must be in range %d - %d",rate, AUDIO_FREQ_MIN, AUDIO_FREQ_MAX);
     setLEDDelay(LEDDelay::ERROR);
     return false;
   }
   if (channels > AUDIO_USB_MAX_CHANNELS || channels < 1) {
-    TU_LOG1("Invalid channels %d: must be in range %d - %d\r\n",channels, 1, AUDIO_USB_MAX_CHANNELS);
+    LOG_AUDIO_DEBUG("Invalid channels %d: must be in range %d - %d",channels, 1, AUDIO_USB_MAX_CHANNELS);
     setLEDDelay(LEDDelay::ERROR);
     return false;
   }
   if (bitsPerSample > MAX_BITS_PER_SAMPLE) {
-    TU_LOG1("Invalid bits %d: must be <= %d\r\n",bitsPerSample, MAX_BITS_PER_SAMPLE);
+    LOG_AUDIO_ERROR("Invalid bits %d: must be <= %d",bitsPerSample, MAX_BITS_PER_SAMPLE);
     setLEDDelay(LEDDelay::ERROR);
     return false;
   }
   if (isMicrophone() && isSpeaker()){
-    TU_LOG1("Both callbacks have been defined");
+    LOG_AUDIO_ERROR("Both callbacks have been defined");
     setLEDDelay(LEDDelay::ERROR);
     return false;
   }
   if (!isMicrophone() && !isSpeaker()){
-    TU_LOG1("No callback has been defined");
+    LOG_AUDIO_ERROR("No callback has been defined");
     setLEDDelay(LEDDelay::ERROR);
     return false;
   }
@@ -194,8 +194,8 @@ bool Adafruit_USBD_Audio::set_req_entity_cb(
   }
 
   debugWrite(5, HIGH);
-  TU_LOG1(
-      "Set request not handled, entity = %d, selector = %d, request = %d\r\n",
+  LOG_AUDIO_DEBUG(
+      "Set request not handled, entity = %d, selector = %d, request = %d",
       request->bEntityID, request->bControlSelector, request->bRequest);
   return false;  // Yet not implemented
 }
@@ -290,7 +290,7 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
         ret.bmChannelConfig = (audio_channel_config_t)0;
         ret.iChannelNames = 0;
 
-        TU_LOG2("    Get terminal connector\r\n");
+        LOG_AUDIO_DEBUG("    Get terminal connector");
 
         bool rc = tud_audio_buffer_and_schedule_control_xfer(
             rhport, p_request, (void *)&ret, sizeof(ret));
@@ -300,13 +300,13 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
 
         // Unknown/Unsupported control selector
       default:
-        TU_LOG2("  Unsupported selector: %d\r\n", entityID);
+        LOG_AUDIO_DEBUG("  Unsupported selector: %d", entityID);
         debugWrite(6, HIGH);
         return false;
     }
   }
 
-  TU_LOG2("  Unsupported entity: %d\r\n", entityID);
+  LOG_AUDIO_DEBUG("  Unsupported entity: %d", entityID);
   debugWrite(6, HIGH);
   return false;  // Yet not implemented
 }
@@ -608,20 +608,20 @@ bool Adafruit_USBD_Audio::speaker_clock_get_request(
 
   if (request->bControlSelector == AUDIO_CS_CTRL_SAM_FREQ) {
     if (request->bRequest == AUDIO_CS_REQ_CUR) {
-      TU_LOG2("Clock get current freq %lu\r\n", _sample_rate);
+      LOG_AUDIO_DEBUG("Clock get current freq %lu", _sample_rate);
 
       audio_control_cur_4_t curf = {(int32_t)tu_htole32(_sample_rate)};
       return tud_audio_buffer_and_schedule_control_xfer(
           rhport, (tusb_control_request_t const *)request, &curf, sizeof(curf));
     } else if (request->bRequest == AUDIO_CS_REQ_RANGE) {
       audio_control_range_4_n_t(1) rangef;
-      TU_LOG2("Clock get %d freq ranges\r\n", 1);
+      LOG_AUDIO_DEBUG("Clock get %d freq ranges", 1);
       rangef.wNumSubRanges = tu_htole16(1);
       rangef.subrange[0].bMin = (int32_t)_sample_rate;
       rangef.subrange[0].bMax = (int32_t)_sample_rate;
       rangef.subrange[0].bRes = 0;
-      TU_LOG2("Range (%d, %d, %d)\r\n", (int)rangef.subrange[i].bMin,
-              (int)rangef.subrange[i].bMax, (int)rangef.subrange[i].bRes);
+      LOG_AUDIO_DEBUG("Range (%d, %d, %d)", (int)rangef.subrange[0].bMin,
+              (int)rangef.subrange[0].bMax, (int)rangef.subrange[0].bRes);
 
       return tud_audio_buffer_and_schedule_control_xfer(
           rhport, (tusb_control_request_t const *)request, &rangef,
@@ -630,14 +630,14 @@ bool Adafruit_USBD_Audio::speaker_clock_get_request(
   } else if (request->bControlSelector == AUDIO_CS_CTRL_CLK_VALID &&
              request->bRequest == AUDIO_CS_REQ_CUR) {
     audio_control_cur_1_t cur_valid = {.bCur = 1};
-    TU_LOG2("Clock get is valid %u\r\n", cur_valid.bCur);
+    LOG_AUDIO_DEBUG("Clock get is valid %u", cur_valid.bCur);
     return tud_audio_buffer_and_schedule_control_xfer(
         rhport, (tusb_control_request_t const *)request, &cur_valid,
         sizeof(cur_valid));
   }
-  TU_LOG1(
+  LOG_AUDIO_DEBUG(
       "Clock get request not supported, entity = %u, selector = %u, request = "
-      "%u\r\n",
+      "%u",
       request->bEntityID, request->bControlSelector, request->bRequest);
   return false;
 }
@@ -654,13 +654,13 @@ bool Adafruit_USBD_Audio::microphone_clock_get_request(
       // channelNum is always zero in this case
       switch (p_request->bRequest) {
         case AUDIO_CS_REQ_CUR:
-          TU_LOG2("    Get Sample Freq.\r\n");
+          LOG_AUDIO_DEBUG("    Get Sample Freq. -> %d", _sample_rate);
           // Buffered control transfer is needed for IN flow control to work
           return tud_audio_buffer_and_schedule_control_xfer(
               rhport, p_request, &_sample_rate, sizeof(_sample_rate));
 
         case AUDIO_CS_REQ_RANGE:
-          TU_LOG2("    Get Sample Freq. range\r\n");
+          LOG_AUDIO_DEBUG("    Get Sample Freq. range -> %d - %d",_sample_rate,_sample_rate);
           audio_control_range_4_n_t(1) sampleFreqRng;
           sampleFreqRng.wNumSubRanges = 1;
           sampleFreqRng.subrange[0].bMin = _sample_rate;
@@ -678,7 +678,7 @@ bool Adafruit_USBD_Audio::microphone_clock_get_request(
 
     case AUDIO_CS_CTRL_CLK_VALID:
       // Only cur attribute exists for this request
-      TU_LOG2("    Get Sample Freq. valid\r\n");
+      LOG_AUDIO_DEBUG("    Get Sample Freq. valid");
       return tud_control_xfer(rhport, p_request, &_clk_is_valid,
                               sizeof(_clk_is_valid));
 
@@ -701,12 +701,12 @@ bool Adafruit_USBD_Audio::speaker_clock_set_request(
   if (request->bControlSelector == AUDIO_CS_CTRL_SAM_FREQ) {
     TU_VERIFY(request->wLength == sizeof(audio_control_cur_4_t));
     _sample_rate = (uint32_t)((audio_control_cur_4_t const *)buf)->bCur;
-    TU_LOG2("Clock set current freq: %ld\r\n", _sample_rate);
+    LOG_AUDIO_DEBUG("Clock set current freq: %ld", _sample_rate);
     return true;
   } else {
-    TU_LOG1(
+    LOG_AUDIO_DEBUG(
         "Clock set request not supported, entity = %u, selector = %u, request "
-        "= %u\r\n",
+        "= %u",
         request->bEntityID, request->bControlSelector, request->bRequest);
     return false;
   }
@@ -842,7 +842,7 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_get_request(
   if (request->bControlSelector == AUDIO_FU_CTRL_MUTE &&
       request->bRequest == AUDIO_CS_REQ_CUR) {
     audio_control_cur_1_t mute1 = {.bCur = _mute[request->bChannelNumber]};
-    TU_LOG2("Get channel %u mute %d\r\n", request->bChannelNumber, mute1.bCur);
+    LOG_AUDIO_DEBUG("Get channel %u mute %d", request->bChannelNumber, mute1.bCur);
     return tud_audio_buffer_and_schedule_control_xfer(
         rhport, (tusb_control_request_t const *)request, &mute1, sizeof(mute1));
   } else if (request->bControlSelector == AUDIO_FU_CTRL_VOLUME) {
@@ -855,7 +855,7 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_get_request(
       range_vol.subrange[0].bMax = 100;
       range_vol.subrange[0].bRes = 1;
 
-      TU_LOG2("Get channel %u volume range (%d, %d, %u)\r\n",
+      LOG_AUDIO_DEBUG("Get channel %u volume range (%d, %d, %u)",
               request->bChannelNumber, range_vol.subrange[0].bMin / 256,
               range_vol.subrange[0].bMax,
               range_vol.subrange[0].bRes);
@@ -865,16 +865,16 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_get_request(
     } else if (request->bRequest == AUDIO_CS_REQ_CUR) {
       audio_control_cur_2_t cur_vol = {
           .bCur = (int16_t)tu_htole16(_volume[request->bChannelNumber])};
-      TU_LOG2("Get channel %u volume %d dB\r\n", request->bChannelNumber,
+      LOG_AUDIO_DEBUG("Get channel %u volume %d dB", request->bChannelNumber,
               cur_vol.bCur / 256);
       return tud_audio_buffer_and_schedule_control_xfer(
           rhport, (tusb_control_request_t const *)request, &cur_vol,
           sizeof(cur_vol));
     }
   }
-  TU_LOG1(
+  LOG_AUDIO_DEBUG(
       "Feature unit get request not supported, entity = %u, selector = %u, "
-      "request = %u\r\n",
+      "request = %u",
       request->bEntityID, request->bControlSelector, request->bRequest);
 
   return false;
@@ -894,18 +894,18 @@ bool Adafruit_USBD_Audio::microphone_feature_unit_get_request(
       // Audio control mute cur parameter block consists of only one byte - we
       // thus can send it right away There does not exist a range parameter
       // block for mute
-      TU_LOG2("    Get Mute of channel: %u\r\n", channelNum);
+      LOG_AUDIO_DEBUG("    Get Mute of channel: %u", channelNum);
       return tud_control_xfer(rhport, p_request, &_mute[channelNum], 1);
 
     case AUDIO_FU_CTRL_VOLUME:
       switch (p_request->bRequest) {
         case AUDIO_CS_REQ_CUR:
-          TU_LOG2("    Get Volume of channel: %u\r\n", channelNum);
+          LOG_AUDIO_DEBUG("    Get Volume of channel: %u", channelNum);
           return tud_control_xfer(rhport, p_request, &_volume[channelNum],
                                   sizeof(_volume[channelNum]));
 
         case AUDIO_CS_REQ_RANGE:
-          TU_LOG2("    Get Volume range of channel: %u\r\n", channelNum);
+          LOG_AUDIO_DEBUG("    Get Volume range of channel: %u", channelNum);
 
           // Copy values - only for testing - better is version below
           audio_control_range_2_n_t(1) ret;
@@ -947,7 +947,7 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_set_request(
 
     _mute[request->bChannelNumber] = ((audio_control_cur_1_t const *)buf)->bCur;
 
-    TU_LOG2("Set channel %d Mute: %d\r\n", request->bChannelNumber,
+    LOG_AUDIO_DEBUG("Set channel %d Mute: %d", request->bChannelNumber,
             _mute[request->bChannelNumber]);
 
     return true;
@@ -957,14 +957,14 @@ bool Adafruit_USBD_Audio::speaker_feature_unit_set_request(
     _volume[request->bChannelNumber] =
         ((audio_control_cur_2_t const *)buf)->bCur;
 
-    TU_LOG2("Set channel %d volume: %d dB\r\n", request->bChannelNumber,
+    LOG_AUDIO_DEBUG("Set channel %d volume: %d dB", request->bChannelNumber,
             _volume[request->bChannelNumber] / 256);
 
     return true;
   } else {
-    TU_LOG1(
+    LOG_AUDIO_DEBUG(
         "Feature unit set request not supported, entity = %u, selector = %u, "
-        "request = %u\r\n",
+        "request = %u",
         request->bEntityID, request->bControlSelector, request->bRequest);
     return false;
   }
@@ -978,6 +978,5 @@ void Adafruit_USBD_Audio::setupDebugPins() {
   }
 #endif
 }
-
 
 #endif

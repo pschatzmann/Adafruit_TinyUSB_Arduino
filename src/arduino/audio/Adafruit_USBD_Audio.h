@@ -274,9 +274,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   virtual bool speaker_clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
 
   virtual bool microphone_feature_unit_get_request(uint8_t rhport, tusb_control_request_t const *request);
-//virtual bool microphon_feature_unit_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
   virtual bool microphone_clock_get_request(uint8_t rhport, tusb_control_request_t const *request);
-//virtual bool microphone_clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
 
 };
 
