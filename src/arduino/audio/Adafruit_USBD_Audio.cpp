@@ -682,117 +682,6 @@ void Adafruit_USBD_Audio::feedback_params_cb(
 }
 #endif
 
-//--------------------------------------------------------------------+
-// Global Callback API Dispatch
-//--------------------------------------------------------------------+
-
-bool tud_audio_set_itf_cb(uint8_t rhport,
-                          tusb_control_request_t const *p_request) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->set_itf_cb(rhport, p_request);
-}
-
-// Invoked when audio class specific set request received for an EP
-bool tud_audio_set_req_ep_cb(uint8_t rhport,
-                             tusb_control_request_t const *p_request,
-                             uint8_t *pBuff) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->set_req_ep_cb(rhport, p_request, pBuff);
-}
-
-// Invoked when audio class specific set request received for an interface
-bool tud_audio_set_req_itf_cb(uint8_t rhport,
-                              tusb_control_request_t const *p_request,
-                              uint8_t *pBuff) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->set_req_itf_cb(rhport, p_request, pBuff);
-}
-
-// Invoked when audio class specific set request received for an entity
-bool tud_audio_set_req_entity_cb(uint8_t rhport,
-                                 tusb_control_request_t const *p_request,
-                                 uint8_t *pBuff) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->set_req_entity_cb(rhport, p_request, pBuff);
-}
-// Invoked when audio class specific get request received for an EP
-bool tud_audio_get_req_ep_cb(uint8_t rhport,
-                             tusb_control_request_t const *p_request) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->get_req_ep_cb(rhport, p_request);
-}
-
-// Invoked when audio class specific get request received for an interface
-bool tud_audio_get_req_itf_cb(uint8_t rhport,
-                              tusb_control_request_t const *p_request) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->get_req_itf_cb(rhport, p_request);
-}
-
-// Invoked when audio class specific get request received for an entity
-bool tud_audio_get_req_entity_cb(uint8_t rhport,
-                                 tusb_control_request_t const *p_request) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->get_req_entity_cb(rhport, p_request);
-}
-
-bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in,
-                                   uint8_t cur_alt_setting) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->tx_done_pre_load_cb(rhport, itf, ep_in,
-                                                       cur_alt_setting);
-}
-
-bool tud_audio_tx_done_post_load_cb(uint8_t rhport, uint16_t n_bytes_copied,
-                                    uint8_t itf, uint8_t ep_in,
-                                    uint8_t cur_alt_setting) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->tx_done_post_load_cb(
-      rhport, n_bytes_copied, itf, ep_in, cur_alt_setting);
-}
-
-bool tud_audio_rx_done_pre_read_cb(uint8_t rhport, uint16_t n_bytes_received,
-                                   uint8_t func_id, uint8_t ep_out,
-                                   uint8_t cur_alt_setting) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->rx_done_pre_read_cb(
-      rhport, n_bytes_received, func_id, ep_out, cur_alt_setting);
-}
-
-bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received,
-                                    uint8_t func_id, uint8_t ep_out,
-                                    uint8_t cur_alt_setting) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->rx_done_post_read_cb(
-      rhport, n_bytes_received, func_id, ep_out, cur_alt_setting);
-}
-
-bool tud_audio_set_itf_close_EP_cb(uint8_t rhport,
-                                   tusb_control_request_t const *p_request) {
-  if (self_Adafruit_USBD_Audio==nullptr) return false;
-  return self_Adafruit_USBD_Audio->set_itf_close_EP_cb(rhport, p_request);
-}
-
-int getUSBDAudioInterfaceDescriptorLength() {
-  if (self_Adafruit_USBD_Audio==nullptr) return 0;
-  return self_Adafruit_USBD_Audio->getInterfaceDescriptorLength();
-}
-
-//--------------------------------------------------------------------+
-// Application Callback API Implementations
-//--------------------------------------------------------------------+
-
-#if CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP
-
-void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf,
-                                  audio_feedback_params_t *feedback_param) {
-  if (self_Adafruit_USBD_Audio != nullptr){
-      self_Adafruit_USBD_Audio->feedback_params_cb(func_id, alt_itf, feedback_param);
-  } 
-}
-
-#endif
-
 // Helper for feature unit get requests
 bool Adafruit_USBD_Audio::feature_unit_get_request(
     uint8_t rhport, tusb_control_request_t const *p_request) {
@@ -892,5 +781,111 @@ void Adafruit_USBD_Audio::setupDebugPins() {
   }
 #endif
 }
+
+//--------------------------------------------------------------------+
+// Global Callback API Dispatch
+//--------------------------------------------------------------------+
+
+bool tud_audio_set_itf_cb(uint8_t rhport,
+                          tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->set_itf_cb(rhport, p_request);
+}
+
+// Invoked when audio class specific set request received for an EP
+bool tud_audio_set_req_ep_cb(uint8_t rhport,
+                             tusb_control_request_t const *p_request,
+                             uint8_t *pBuff) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->set_req_ep_cb(rhport, p_request, pBuff);
+}
+
+// Invoked when audio class specific set request received for an interface
+bool tud_audio_set_req_itf_cb(uint8_t rhport,
+                              tusb_control_request_t const *p_request,
+                              uint8_t *pBuff) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->set_req_itf_cb(rhport, p_request, pBuff);
+}
+
+// Invoked when audio class specific set request received for an entity
+bool tud_audio_set_req_entity_cb(uint8_t rhport,
+                                 tusb_control_request_t const *p_request,
+                                 uint8_t *pBuff) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->set_req_entity_cb(rhport, p_request, pBuff);
+}
+// Invoked when audio class specific get request received for an EP
+bool tud_audio_get_req_ep_cb(uint8_t rhport,
+                             tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->get_req_ep_cb(rhport, p_request);
+}
+
+// Invoked when audio class specific get request received for an interface
+bool tud_audio_get_req_itf_cb(uint8_t rhport,
+                              tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->get_req_itf_cb(rhport, p_request);
+}
+
+// Invoked when audio class specific get request received for an entity
+bool tud_audio_get_req_entity_cb(uint8_t rhport,
+                                 tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->get_req_entity_cb(rhport, p_request);
+}
+
+bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in,
+                                   uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->tx_done_pre_load_cb(rhport, itf, ep_in,
+                                                       cur_alt_setting);
+}
+
+bool tud_audio_tx_done_post_load_cb(uint8_t rhport, uint16_t n_bytes_copied,
+                                    uint8_t itf, uint8_t ep_in,
+                                    uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->tx_done_post_load_cb(
+      rhport, n_bytes_copied, itf, ep_in, cur_alt_setting);
+}
+
+bool tud_audio_rx_done_pre_read_cb(uint8_t rhport, uint16_t n_bytes_received,
+                                   uint8_t func_id, uint8_t ep_out,
+                                   uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->rx_done_pre_read_cb(
+      rhport, n_bytes_received, func_id, ep_out, cur_alt_setting);
+}
+
+bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received,
+                                    uint8_t func_id, uint8_t ep_out,
+                                    uint8_t cur_alt_setting) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->rx_done_post_read_cb(
+      rhport, n_bytes_received, func_id, ep_out, cur_alt_setting);
+}
+
+bool tud_audio_set_itf_close_EP_cb(uint8_t rhport,
+                                   tusb_control_request_t const *p_request) {
+  if (self_Adafruit_USBD_Audio==nullptr) return false;
+  return self_Adafruit_USBD_Audio->set_itf_close_EP_cb(rhport, p_request);
+}
+
+int getUSBDAudioInterfaceDescriptorLength() {
+  if (self_Adafruit_USBD_Audio==nullptr) return 0;
+  return self_Adafruit_USBD_Audio->getInterfaceDescriptorLength();
+}
+
+#if CFG_TUD_AUDIO_ENABLE_FEEDBACK_EP
+
+void tud_audio_feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t *feedback_param) {
+  if (self_Adafruit_USBD_Audio != nullptr){
+      self_Adafruit_USBD_Audio->feedback_params_cb(func_id, alt_itf, feedback_param);
+  } 
+}
+
+#endif
 
 #endif
