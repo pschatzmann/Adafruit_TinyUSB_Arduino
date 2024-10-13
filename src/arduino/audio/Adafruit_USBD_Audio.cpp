@@ -38,27 +38,27 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
   // check data
   if (rate > AUDIO_FREQ_MAX || rate < AUDIO_FREQ_MIN) {
     LOG_AUDIO_DEBUG("Invalid sample rate %d: must be in range %d - %d",rate, AUDIO_FREQ_MIN, AUDIO_FREQ_MAX);
-    setLEDDelay(LEDDelay::ERROR);
+    setStatus(AudioProcessingStatus::ERROR);
     return false;
   }
   if (channels > AUDIO_USB_MAX_CHANNELS || channels < 1) {
     LOG_AUDIO_DEBUG("Invalid channels %d: must be in range %d - %d",channels, 1, AUDIO_USB_MAX_CHANNELS);
-    setLEDDelay(LEDDelay::ERROR);
+    setStatus(AudioProcessingStatus::ERROR);
     return false;
   }
   if (bitsPerSample > MAX_BITS_PER_SAMPLE) {
     LOG_AUDIO_ERROR("Invalid bits %d: must be <= %d",bitsPerSample, MAX_BITS_PER_SAMPLE);
-    setLEDDelay(LEDDelay::ERROR);
+    setStatus(AudioProcessingStatus::ERROR);
     return false;
   }
   if (isMicrophone() && isSpeaker()){
     LOG_AUDIO_ERROR("Both callbacks have been defined");
-    setLEDDelay(LEDDelay::ERROR);
+    setStatus(AudioProcessingStatus::ERROR);
     return false;
   }
   if (!isMicrophone() && !isSpeaker()){
     LOG_AUDIO_ERROR("No callback has been defined");
-    setLEDDelay(LEDDelay::ERROR);
+    setStatus(AudioProcessingStatus::ERROR);
     return false;
   }
 
@@ -68,8 +68,7 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
   this->_bits_per_sample = bitsPerSample;
   this->_channels = channels;
   _clk_is_valid = 1;
-  _is_active = true;
-  setLEDDelay(LEDDelay::ACTIVE);
+  setStatus(AudioProcessingStatus::ACTIVE);
 
   bool rc = TinyUSBDevice.addInterface(*this);
 
@@ -78,8 +77,7 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
 
 void Adafruit_USBD_Audio::end() {
   tud_deinit(_rh_port);
-  _is_active = false;
-  setLEDDelay(LEDDelay::INACTIVE);
+  setStatus(AudioProcessingStatus::INACTIVE);
   if (_out_buffer.size() > 0) _out_buffer.resize(0);
   if (_in_buffer.size() > 0) _out_buffer.resize(0);
 }
@@ -92,15 +90,15 @@ bool Adafruit_USBD_Audio::updateLED(int pin) {
   }
 
   // led must be active
-  if (_led_delay_ms != LEDDelay::INACTIVE && millis() > _led_timeout) {
-    _led_timeout = millis() + (uint16_t)_led_delay_ms;
+  if (_processing_status != AudioProcessingStatus::INACTIVE && millis() > _led_timeout) {
+    _led_timeout = millis() + (uint16_t)_processing_status;
     _led_active = !_led_active;
     digitalWrite(pin, _led_active);
     return true;
   }
 
   // led is inactive
-  if (_led_delay_ms == LEDDelay::INACTIVE) {
+  if (_processing_status == AudioProcessingStatus::INACTIVE) {
     if (_led_active) {
       _led_active = false;
       digitalWrite(pin, _led_active);
@@ -120,7 +118,7 @@ bool Adafruit_USBD_Audio::set_itf_cb(uint8_t rhport,
   uint8_t const itf = tu_u16_low(tu_le16toh(p_request->wIndex));
   uint8_t const alt = tu_u16_low(tu_le16toh(p_request->wValue));
 
-  if (alt != 0) setLEDDelay(LEDDelay::PLAYING);
+  if (alt != 0) setStatus(AudioProcessingStatus::PLAYING);
 
   return true;
 }
@@ -404,7 +402,7 @@ bool Adafruit_USBD_Audio::set_itf_close_EP_cb(
   (void)rhport;
   uint8_t const itf = tu_u16_low(tu_le16toh(p_request->wIndex));
   uint8_t const alt = tu_u16_low(tu_le16toh(p_request->wValue));
-  if (alt == 0) setLEDDelay(LEDDelay::ACTIVE);
+  if (alt == 0) setStatus(AudioProcessingStatus::ACTIVE);
 
   return true;
 }
