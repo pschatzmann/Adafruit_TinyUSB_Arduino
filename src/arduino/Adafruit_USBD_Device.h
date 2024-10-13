@@ -38,7 +38,7 @@ private:
   enum { STRING_DESCRIPTOR_MAX = 12 };
 
   // Device descriptor
-  // PS tusb_desc_device_t _desc_device __attribute__((aligned(4)));
+  tusb_desc_device_t _desc_device __attribute__((aligned(4)));
 
   // Configuration descriptor
   uint8_t *_desc_cfg;
@@ -109,7 +109,9 @@ public:
   void setProductDescriptor(const char *s);
   void setSerialDescriptor(const char *s);
   uint8_t getSerialDescriptor(uint16_t *serial_utf16);
+
   uint8_t addStringDescriptor(const char *s);
+
   //------------- Control -------------//
 
   bool begin(uint8_t rhport = 0);
@@ -128,7 +130,6 @@ public:
 
 private:
   uint16_t const *descriptor_string_cb(uint8_t index, uint16_t langid);
-  tusb_desc_device_t _desc_device __attribute__((aligned(4)));
 
   friend uint8_t const *tud_descriptor_device_cb(void);
   friend uint8_t const *tud_descriptor_configuration_cb(uint8_t index);

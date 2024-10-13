@@ -44,9 +44,7 @@ void TinyUSB_Device_Init(uint8_t rhport) {
 #ifndef ARDUINO_ARCH_RP2040
 void TinyUSB_Device_Task(void) {
   // Run tinyusb device task
-  debugWrite(7, HIGH);
   tud_task();
-  debugWrite(7, LOW);
 }
 #endif
 
