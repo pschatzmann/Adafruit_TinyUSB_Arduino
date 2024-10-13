@@ -49,7 +49,7 @@
 //--------------------------------------------------------------------
 // Debugging Logging and Testing
 //--------------------------------------------------------------------
-#define AUDIO_LOG(...)              {char msg[160]; snprintf(msg, 160, __VA_ARGS__); LOG_AUDIO_OUTPUT.println(msg);}
+#define AUDIO_LOG(...)              {char msg[160]; snprintf(msg, 160, __VA_ARGS__); LOG_AUDIO_OUTPUT.println(msg); LOG_AUDIO_OUTPUT.flush();}
 #define AUDIO_NO_LOG(...)
 
 #define LOG_AUDIO_OUTPUT            Serial
