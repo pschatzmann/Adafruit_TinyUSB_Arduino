@@ -130,12 +130,24 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     _cdc_active = flag;
   }
 
-  uint16_t getMaxEPSize();
+  bool isMicrophone() {
+    return (p_read_callback!=nullptr && p_read_callback!=defaultReadCB)
+    || (p_read_callback==defaultReadCB && p_stream!=nullptr);
+  }
+
+  bool isSpeaker() {
+    return (p_write_callback!=nullptr && p_write_callback!=defaultWriteCB)
+    || (p_write_callback==defaultWriteCB && p_print!=nullptr);
+  }
+
 
 
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
   //--------------------------------------------------------------------+
+  uint16_t getMaxEPSize(){
+    return TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE, _bits_per_sample / 8, _channels);
+  }
 
   uint16_t get_io_size() {
     return TUD_AUDIO_EP_SIZE(_sample_rate, _bits_per_sample/8, _channels);
@@ -245,15 +257,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     _append_pos += len;
   }
 
-  bool isMicrophone() {
-    return p_read_callback!=nullptr && p_read_callback!=defaultReadCB
-    || p_read_callback==defaultReadCB && p_stream!=nullptr;
-  }
-
-  bool isSpeaker() {
-    return p_write_callback!=nullptr && p_write_callback!=defaultWriteCB
-    || p_write_callback==defaultWriteCB && p_print!=nullptr;
-  }
 
   static size_t defaultWriteCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref){
     Print* p_print = ref.p_print;
@@ -267,14 +270,12 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     return 0;
   }
 
-  // for speaker
-  virtual bool speaker_feature_unit_get_request(uint8_t rhport, audio_control_request_t const *request);
-  virtual bool speaker_feature_unit_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
-  virtual bool speaker_clock_get_request(uint8_t rhport, audio_control_request_t const *request);
-  virtual bool speaker_clock_set_request(uint8_t rhport, audio_control_request_t const *request, uint8_t const *buf);
+// Helper methods
+  virtual bool feature_unit_get_request(uint8_t rhport, tusb_control_request_t const *request);
+  virtual bool feature_unit_set_request(uint8_t rhport, tusb_control_request_t const *request, uint8_t const *buf);
+  virtual bool clock_get_request(uint8_t rhport, tusb_control_request_t const *request);
+  virtual bool clock_set_request(uint8_t rhport, tusb_control_request_t const *request, uint8_t const *buf);
 
-  virtual bool microphone_feature_unit_get_request(uint8_t rhport, tusb_control_request_t const *request);
-  virtual bool microphone_clock_get_request(uint8_t rhport, tusb_control_request_t const *request);
 
 };
 
