@@ -48,7 +48,7 @@
 /* Low level controller
  *------------------------------------------------------------------*/
 static void hw_endpoint_init1(uint8_t ep_addr, uint16_t wMaxPacketSize, uint8_t transfer_type);
-static void _hw_set_enpoint_conntrol(struct hw_endpoint* ep, uint dpram_offset);
+static void _hw_set_endpoint_control_reg(struct hw_endpoint* ep, uint dpram_offset);
 
 // Init these in dcd_init
 static uint8_t* next_buffer_ptr = NULL;
@@ -103,10 +103,10 @@ static void _hw_endpoint_alloc(struct hw_endpoint* ep, uint8_t transfer_type) {
   uint dpram_offset = hw_data_offset(ep->hw_data_buf);
   pico_info("  Allocated %d bytes at offset 0x%x (0x%p)\r\n", size, dpram_offset, ep->hw_data_buf);
 
-  _hw_set_enpoint_conntrol(ep, dpram_offset);
+  _hw_set_endpoint_control_reg(ep, dpram_offset);
 }
 
-static void _hw_set_enpoint_conntrol(struct hw_endpoint* ep, uint dpram_offset) {
+static void _hw_set_endpoint_control_reg(struct hw_endpoint* ep, uint dpram_offset) {
   // Fill in endpoint control register with buffer offset
   uint32_t const reg = EP_CTRL_ENABLE_BITS | ((uint) ep->transfer_type << EP_CTRL_BUFFER_TYPE_LSB) | dpram_offset;
   *ep->endpoint_control = reg;
@@ -165,7 +165,7 @@ bool dcd_edpt_iso_activate(uint8_t rhport, tusb_desc_endpoint_t const * ep_desc)
   uint dpram_offset = hw_data_offset(ep->hw_data_buf);
 
   // setup enpoint control register
-  _hw_set_enpoint_conntrol(ep, dpram_offset);
+  _hw_set_endpoint_control_reg(ep, dpram_offset);
   return true;
 }
 
