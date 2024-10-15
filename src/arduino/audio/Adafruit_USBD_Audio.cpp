@@ -51,11 +51,6 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
     setStatus(AudioProcessingStatus::ERROR);
     return false;
   }
-  if (isMicrophone() && isSpeaker()){
-    LOG_AUDIO_ERROR("Both callbacks have been defined");
-    setStatus(AudioProcessingStatus::ERROR);
-    return false;
-  }
   if (!isMicrophone() && !isSpeaker()){
     LOG_AUDIO_ERROR("No callback has been defined");
     setStatus(AudioProcessingStatus::ERROR);
@@ -185,7 +180,7 @@ bool Adafruit_USBD_Audio::set_req_entity_cb(
     debugWrite(5, LOW);
     return rc;
   }
-  if (request->bEntityID == UAC2_ENTITY_SPK_CLOCK){
+  if (request->bEntityID == UAC2_ENTITY_CLOCK){
     bool rc = clock_set_request(rhport, p_request, buf);
     debugWrite(5, LOW);
     return rc;
@@ -249,22 +244,16 @@ bool Adafruit_USBD_Audio::get_req_entity_cb(
 
   debugWrite(6, HIGH);
 
-  // Clock Source speaker
-  if (request->bEntityID == UAC2_ENTITY_SPK_CLOCK){
+  // Clock Source 
+  if (request->bEntityID == UAC2_ENTITY_CLOCK){
     bool rc = clock_get_request(rhport, p_request);
-    if (rc) debugWrite(6, LOW);
-    return rc;
-  }
-  // Fueature unit speaker
-  if (request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT){
-    bool rc = feature_unit_get_request(rhport, p_request);  
     if (rc) debugWrite(6, LOW);
     return rc;
   }
 
-  // Clock Source mic
-  if (entityID == UAC2_ENTITY_MIC_CLOCK){
-    bool rc = clock_get_request(rhport, p_request);
+  // Fueature unit speaker
+  if (request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT){
+    bool rc = feature_unit_get_request(rhport, p_request);  
     if (rc) debugWrite(6, LOW);
     return rc;
   }
@@ -321,7 +310,7 @@ bool Adafruit_USBD_Audio::tx_done_pre_load_cb(uint8_t rhport, uint8_t itf,
   if (isMicrophone()) {
     debugWrite(1, HIGH);
     // manage buffer size
-    uint16_t len = get_io_size() - 2;  // CFG_TUD_AUDIO_EP_SZ_IN - 2;
+    uint16_t len = getIOSize() - 2;  // CFG_TUD_AUDIO_EP_SZ_IN - 2;
     if (_out_buffer.size() < len) _out_buffer.resize(len);
 
     // return if the buffer is already filled
@@ -423,11 +412,8 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   if (buf == nullptr && _desc_len > 0){
     return _desc_len;
   }
-
-  uint8_t feature_unit_len =   (6+(_channels+1)*4);
-  uint8_t total_len_mik = TUD_AUDIO_DESC_CLK_SRC_LEN+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN+feature_unit_len;
-  uint8_t total_len_spk = TUD_AUDIO_DESC_CLK_SRC_LEN+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN+feature_unit_len;
-  uint8_t total_len = 0;
+  uint8_t feature_unit_len = getFeatureUnitLength();
+  _append_pos = 0;
 
   if (_itf_number_total == 0){
    _itf_number_total = 1;
@@ -435,24 +421,43 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
    _ep_ctl = TinyUSBDevice.allocEndpoint(true);
   }
 
+  if (isHeadset() && _itfnum_mic==0) {
+    uint8_t total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len + 2 *(TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN);
+    _itfnum_mic = TinyUSBDevice.allocInterface(); // input interface
+    _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
+    _ep_mic = TinyUSBDevice.allocEndpoint(true); // intput
+    _ep_int = TinyUSBDevice.allocEndpoint(true); // input 
+    _ep_spk = TinyUSBDevice.allocEndpoint(false); // output
+    _itf_number_total += 2;
+    interfaceDescriptorMicrophone(buf, total_len);
+  }
+
   if (isMicrophone() && _itfnum_mic==0) {
+    uint8_t total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     _itfnum_mic = TinyUSBDevice.allocInterface();
     _ep_mic = TinyUSBDevice.allocEndpoint(true);
     _itf_number_total++;
-    total_len += total_len_mik;
+    interfaceDescriptorMicrophone(buf, total_len);
   }
 
   if (isSpeaker() && _itfnum_spk==0) {
+    uint8_t total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
     _ep_spk = TinyUSBDevice.allocEndpoint(false);
     _ep_fb = TinyUSBDevice.allocEndpoint(true);
     _itf_number_total++;
-    total_len += total_len_spk;
+    interfaceDescriptorSpeaker(buf, total_len);
   }
 
-  uint8_t _stridx = 4; //2;
-  _append_pos = 0;
+  if (_desc_len==0){
+    _desc_len = _append_pos;
+  }
 
+  return _desc_len;
+}
+
+void Adafruit_USBD_Audio::interfaceDescriptorHeader(uint8_t *buf,uint8_t total_len, uint8_t category){
+  uint8_t _stridx = 4; 
 
   /* Standard Interface Association Descriptor (IAD) */
   uint8_t d1[] = {TUD_AUDIO_DESC_IAD(/*_firstitfs*/ _itfnum_ctl, /*_nitfs*/ _itf_number_total, /*_stridx*/ 0)};
@@ -463,22 +468,24 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   append(buf, d2, sizeof(d2));
 
   /* Class-Specific AC Interface Header Descriptor(4.7.2)  AUDIO_FUNC_OTHER */
-  uint8_t d3[] = {TUD_AUDIO_DESC_CS_AC(/*_bcdADC*/ 0x0200, /*_category*/ AUDIO_FUNC_DESKTOP_SPEAKER, /*_totallen*/  total_len, /*_ctrl*/ AUDIO_CTRL_NONE << AUDIO_CS_AS_INTERFACE_CTRL_LATENCY_POS)};
+  uint8_t d3[] = {TUD_AUDIO_DESC_CS_AC(/*_bcdADC*/ 0x0200, /*_category*/ category, /*_totallen*/  total_len, /*_ctrl*/ AUDIO_CTRL_NONE << AUDIO_CS_AS_INTERFACE_CTRL_LATENCY_POS)};
   append(buf, d3, sizeof(d3));
 
-  if (isMicrophone()) {
+}
+void Adafruit_USBD_Audio::interfaceDescriptorMicrophone(uint8_t *buf, uint8_t total_len){
+    interfaceDescriptorHeader(buf, total_len, AUDIO_FUNC_MICROPHONE);
     /* Clock Source Descriptor(4.7.2.1) */
     //   TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ 0x04, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_FIX_CLK, /*_ctrl*/ (AUDIO_CTRL_R << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS), /*_assocTerm*/ 0x01,  /*_stridx*/ 0x00),
-    uint8_t d4[] = {TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_MIC_CLOCK, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_FIX_CLK, /*_ctrl*/ (AUDIO_CTRL_R << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS), /*_assocTerm*/ UAC2_ENTITY_MIC_INPUT_TERMINAL,  /*_stridx*/ 0x00)};
+    uint8_t d4[] = {TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_CLOCK, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_FIX_CLK, /*_ctrl*/ (AUDIO_CTRL_R << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS), /*_assocTerm*/ UAC2_ENTITY_MIC_INPUT_TERMINAL,  /*_stridx*/ 0x00)};
     append(buf, d4, sizeof(d4));
 
     /* Input Terminal Descriptor(4.7.2.4) */
     // TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ 0x01, /*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC, /*_assocTerm*/ 0x03, /*_clkid*/ 0x04, /*_nchannelslogical*/ 0x02, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00),
-    uint8_t d7[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC, /*_assocTerm*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_MIC_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00)};
+    uint8_t d7[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_termtype*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_assocTerm*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS, /*_stridx*/ 0x00)};
     append(buf, d7, sizeof(d7));
     /* Output Terminal Descriptor(4.7.2.5) */
     //TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ 0x03, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x01, /*_srcid*/ 0x02, /*_clkid*/ 0x04, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00),
-    uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_srcid*/ UAC2_ENTITY_MIC_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_MIC_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
+    uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_srcid*/ UAC2_ENTITY_MIC_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
     append(buf, d8, sizeof(d8));
 
   /* Feature Unit Descriptor(4.7.2.8) */
@@ -487,6 +494,7 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   // uint8_t dfu[] = {TUD_AUDIO_DESC_FEATURE_UNIT_TWO_CHANNEL(/*_unitid*/ UAC2_ENTITY_MIC_FEATURE_UNIT, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_ctrlch0master*/ AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS, /*_ctrlch1*/ AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS, /*_ctrlch2*/ AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS,  /*_stridx*/ 0x00)};
   // append(buf, dfu, sizeof(dfu));
 
+    uint8_t feature_unit_len = getFeatureUnitLength();
     uint8_t df1[] = {	feature_unit_len, TUSB_DESC_CS_INTERFACE, AUDIO_CS_AC_INTERFACE_FEATURE_UNIT, /*_unitid*/UAC2_ENTITY_MIC_FEATURE_UNIT, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_ctrlch0master*/ U32_TO_U8S_LE( AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS)};
     append(buf, df1, sizeof(df1));
     for (int j=0;j<_channels;j++) {
@@ -522,20 +530,22 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
     //               TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, /*_lockdelay*/ 0x0000)
     uint8_t d20[] = {TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, /*_lockdelay*/ 0x0000)};
     append(buf, d20, sizeof(d20));
-  }
 
-  if (isSpeaker()){
+}
+
+void Adafruit_USBD_Audio::interfaceDescriptorSpeaker(uint8_t *buf, uint8_t total_len){
+    interfaceDescriptorHeader(buf, total_len, AUDIO_FUNC_DESKTOP_SPEAKER);
     /* Clock Source Descriptor(4.7.2.1) */
     //   TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ 0x04, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_FIX_CLK, /*_ctrl*/ (AUDIO_CTRL_R << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS), /*_assocTerm*/ 0x01,  /*_stridx*/ 0x00),
-    uint8_t d4[] = {TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_SPK_CLOCK, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_PRO_CLK, /*_ctrl*/ (AUDIO_CTRL_RW << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS), /*_assocTerm*/ UAC2_ENTITY_SPK_INPUT_TERMINAL,  /*_stridx*/ 0x00)};
+    uint8_t d4[] = {TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_CLOCK, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_PRO_CLK, /*_ctrl*/ (AUDIO_CTRL_RW << AUDIO_CLOCK_SOURCE_CTRL_CLK_FRQ_POS), /*_assocTerm*/ UAC2_ENTITY_SPK_INPUT_TERMINAL,  /*_stridx*/ 0x00)};
     append(buf, d4, sizeof(d4));
     /* Input Terminal Descriptor(4.7.2.4) */
     //              TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ 0x01, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ 0x04, /*_nchannelslogical*/ 0x02, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ 0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00),
-    uint8_t d7[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_SPK_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ 0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00)};
+    uint8_t d7[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ 0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00)};
     append(buf, d7, sizeof(d7));
     /* Output Terminal Descriptor(4.7.2.5) */
     //              TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ 0x03, /*_termtype*/ AUDIO_TERM_TYPE_OUT_DESKTOP_SPEAKER, /*_assocTerm*/ 0x01, /*_srcid*/ 0x02, /*_clkid*/ 0x04, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00),
-    uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_OUT_DESKTOP_SPEAKER, /*_assocTerm*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_srcid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_SPK_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
+    uint8_t d8[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_OUT_DESKTOP_SPEAKER, /*_assocTerm*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_srcid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
     append(buf, d8, sizeof(d8));
 
   /* Feature Unit Descriptor(4.7.2.8) */
@@ -544,6 +554,7 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
   // uint8_t dfu[] = {TUD_AUDIO_DESC_FEATURE_UNIT_TWO_CHANNEL(/*_unitid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_srcid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrlch0master*/ AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS, /*_ctrlch1*/ AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS, /*_ctrlch2*/ AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS,  /*_stridx*/ 0x00)};
   // append(buf, dfu, sizeof(dfu));
 
+    uint8_t feature_unit_len = getFeatureUnitLength();
     uint8_t df1[] = {	feature_unit_len, TUSB_DESC_CS_INTERFACE, AUDIO_CS_AC_INTERFACE_FEATURE_UNIT, /*_unitid*/UAC2_ENTITY_SPK_FEATURE_UNIT, /*_srcid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrlch0master*/ U32_TO_U8S_LE( AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS)};
     append(buf, df1, sizeof(df1));
     for (int j=0;j<_channels;j++) {
@@ -586,18 +597,134 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
     // TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(/*_ep*/ _epfb, /*_epsize*/ _epfbsize, /*_interval*/ TUD_OPT_HIGH_SPEED ? 4 : 1)
     uint8_t d21[] = {TUD_AUDIO_DESC_STD_AS_ISO_FB_EP(/*_ep*/ _ep_fb, /*_epsize*/ 0X04, /*_interval*/ TUD_OPT_HIGH_SPEED ? 4 : 1)};
     append(buf, d21, sizeof(d21));
-  }
 
-  if (_desc_len==0){
-    _desc_len = _append_pos;
-  }
+}
 
-  return _desc_len;
+void Adafruit_USBD_Audio::interfaceDescriptorHeadset(uint8_t *buf, uint8_t total_len) {
+
+  interfaceDescriptorHeader(buf, total_len, AUDIO_FUNC_HEADSET);
+
+  /* Clock Source Descriptor(4.7.2.1) */\
+  // TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_CLOCK, /*_attr*/ 3, /*_ctrl*/ 7, /*_assocTerm*/ 0x00,  /*_stridx*/ 0x00),    
+  uint8_t d1[] = {TUD_AUDIO_DESC_CLK_SRC(/*_clkid*/ UAC2_ENTITY_CLOCK, /*_attr*/ AUDIO_CLOCK_SOURCE_ATT_INT_PRO_CLK, /*_ctrl*/ 7, /*_assocTerm*/ 00,  /*_stridx*/ 0x00)};
+  append(buf, d1, sizeof(d1));
+
+  /* Input Terminal Descriptor(4.7.2.4) */\
+  //TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ 0x02, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ 0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00),
+  uint8_t d2[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ 0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00)};
+  append(buf, d2, sizeof(d2));
+
+
+  /* Feature Unit Descriptor(4.7.2.8) */\
+  //TUD_AUDIO_DESC_FEATURE_UNIT_TWO_CHANNEL(/*_unitid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_srcid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrlch0master*/ (AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS), /*_ctrlch1*/ (AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS), /*_ctrlch2*/ (AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS), /*_stridx*/ 0x00),
+  uint8_t feature_unit_len = getFeatureUnitLength();
+  uint8_t df1[] = {	feature_unit_len, TUSB_DESC_CS_INTERFACE, AUDIO_CS_AC_INTERFACE_FEATURE_UNIT, /*_unitid*/UAC2_ENTITY_SPK_FEATURE_UNIT, /*_srcid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrlch0master*/ U32_TO_U8S_LE( AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS)};
+  append(buf, df1, sizeof(df1));
+  for (int j=0;j<_channels;j++) {
+      uint8_t df2[] = { U32_TO_U8S_LE(AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_MUTE_POS | AUDIO_CTRL_RW << AUDIO_FEATURE_UNIT_CTRL_VOLUME_POS) };
+      append(buf, df2, sizeof(df2));
+  }
+  /*_stridx 0x00*/ 
+  uint8_t df3[1] = { 0x00 };
+  append(buf, df3, sizeof(df3));
+
+//-- out ---
+
+  /* Output Terminal Descriptor(4.7.2.5) */\
+  //TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_OUT_HEADPHONES, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00),
+  uint8_t d3[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_SPK_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_OUT_HEADPHONES, /*_assocTerm*/ 00, /*_srcid*/ UAC2_ENTITY_SPK_FEATURE_UNIT, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
+  append(buf, d3, sizeof(d3));
+
+  /* Input Terminal Descriptor(4.7.2.4) */\
+  //TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC, /*_assocTerm*/ 0x00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ 0x01, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/ 0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00),
+  uint8_t d4[] = {TUD_AUDIO_DESC_INPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC, /*_assocTerm*/ 00, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_nchannelslogical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_idxchannelnames*/ 0x00, /*_ctrl*/0 * (AUDIO_CTRL_R << AUDIO_IN_TERM_CTRL_CONNECTOR_POS), /*_stridx*/ 0x00)};
+  append(buf, d4, sizeof(d4));
+
+  /* Output Terminal Descriptor(4.7.2.5) */\
+  //TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 0x00, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00),
+  uint8_t d5[] = {TUD_AUDIO_DESC_OUTPUT_TERM(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING, /*_assocTerm*/ 00, /*_srcid*/ UAC2_ENTITY_MIC_INPUT_TERMINAL, /*_clkid*/ UAC2_ENTITY_CLOCK, /*_ctrl*/ 0x0000, /*_stridx*/ 0x00)};
+  append(buf, d5, sizeof(d5));
+
+  // /* Standard AC Interrupt Endpoint Descriptor(4.8.2.1) */\
+  // // TODO TUD_AUDIO_DESC_STD_AC_INT_EP(/*_ep*/ _epint, /*_interval*/ 0x01), 
+  uint8_t d6[] = {TUD_AUDIO_DESC_STD_AC_INT_EP(/*_ep*/ _ep_int, /*_interval*/ 0x01)};
+  append(buf, d6, sizeof(d6));
+
+// -- SPK ---
+
+  /* Standard AS Interface Descriptor(4.9.1) */\
+  /* Interface 1, Alternate 0 - default alternate setting with 0 bandwidth */\
+  //TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(ITF_NUM_AUDIO_STREAMING_SPK), /*_altset*/ 0x00, /*_nEPs*/ 0x00, /*_stridx*/ 0x05),
+  uint8_t d7[] = { TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(_itfnum_spk), /*_altset*/ 0x00, /*_nEPs*/ 0x00, /*_stridx*/ 0x05)};
+  append(buf, d7, sizeof(d7));
+
+  /* Standard AS Interface Descriptor(4.9.1) */\
+  /* Interface 1, Alternate 1 - alternate interface for data streaming */\
+  //TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(ITF_NUM_AUDIO_STREAMING_SPK), /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ 0x05),
+  uint8_t d8[] = { TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(_itfnum_spk), /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ 0x05)};
+  append(buf, d8, sizeof(d8));
+
+
+  /* Class-Specific AS Interface Descriptor(4.9.2) */\
+  //TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00),
+  uint8_t d9[] = {TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_SPK_INPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00)};
+  append(buf, d9, sizeof(d9));
+
+
+  /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */\
+  //TUD_AUDIO_DESC_TYPE_I_FORMAT(CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_RX, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_RX),
+  uint8_t d10[] = {TUD_AUDIO_DESC_TYPE_I_FORMAT((uint8_t)(_bits_per_sample/8), (uint8_t)_bits_per_sample)};
+  append(buf, d10, sizeof(d10));
+
+
+  /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */\
+  //TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ _epout, /*_attr*/ (uint8_t) ((uint8_t)TUSB_XFER_ISOCHRONOUS | (uint8_t)TUSB_ISO_EP_ATT_ADAPTIVE | (uint8_t)TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_MAX_SAMPLE_RATE, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_RX, CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX), /*_interval*/ 0x01),
+  uint8_t d11[] = {TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ _ep_spk, /*_attr*/ (uint8_t) ((uint8_t)TUSB_XFER_ISOCHRONOUS | (uint8_t)TUSB_ISO_EP_ATT_ADAPTIVE | (uint8_t)TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ getMaxEPSize(), /*_interval*/ 0x01)};
+  append(buf, d11, sizeof(d11));
+
+  /* Class-Specific AS Isochronous Audio Data Endpoint Descriptor(4.10.1.2) */
+  //TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_MILLISEC, /*_lockdelay*/ 0x0001),
+  uint8_t d12[] = {TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_MILLISEC, /*_lockdelay*/ 0x0001)};
+  append(buf, d12, sizeof(d12));
+
+// -- MIC ---
+  /* Standard AS Interface Descriptor(4.9.1) */\
+  /* Interface 2, Alternate 0 - default alternate setting with 0 bandwidth */\
+  //TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(ITF_NUM_AUDIO_STREAMING_MIC), /*_altset*/ 0x00, /*_nEPs*/ 0x00, /*_stridx*/ 0x04),
+  uint8_t d18[] = {TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(_itfnum_mic), /*_altset*/ 0x00, /*_nEPs*/ 0x00, /*_stridx*/ 0x04)};
+  append(buf, d18, sizeof(d18));
+
+  /* Standard AS Interface Descriptor(4.9.1) */\
+  /* Interface 2, Alternate 1 - alternate interface for data streaming */\
+  //TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(ITF_NUM_AUDIO_STREAMING_MIC), /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ 0x04),
+  uint8_t d19[] = {TUD_AUDIO_DESC_STD_AS_INT(/*_itfnum*/ (uint8_t)(_itfnum_mic), /*_altset*/ 0x01, /*_nEPs*/ 0x01, /*_stridx*/ 0x04)};
+  append(buf, d19, sizeof(d19));
+
+  /* Class-Specific AS Interface Descriptor(4.9.2) */\
+  //TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00),
+  uint8_t d20[] = {TUD_AUDIO_DESC_CS_AS_INT(/*_termid*/ UAC2_ENTITY_MIC_OUTPUT_TERMINAL, /*_ctrl*/ AUDIO_CTRL_NONE, /*_formattype*/ AUDIO_FORMAT_TYPE_I, /*_formats*/ AUDIO_DATA_FORMAT_TYPE_I_PCM, /*_nchannelsphysical*/ _channels, /*_channelcfg*/ AUDIO_CHANNEL_CONFIG_NON_PREDEFINED, /*_stridx*/ 0x00)};
+  append(buf, d20, sizeof(d20));
+
+  /* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */\
+  //TUD_AUDIO_DESC_TYPE_I_FORMAT(CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_TX),
+  uint8_t d21[] = {TUD_AUDIO_DESC_TYPE_I_FORMAT((uint8_t)(_bits_per_sample/8), (uint8_t)_bits_per_sample)};
+  append(buf, d21, sizeof(d21));
+
+  /* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */\
+  //TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ _epin, /*_attr*/ (uint8_t) ((uint8_t)TUSB_XFER_ISOCHRONOUS | (uint8_t)TUSB_ISO_EP_ATT_ASYNCHRONOUS | (uint8_t)TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_MAX_SAMPLE_RATE, CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX, CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX), /*_interval*/ 0x01),
+  uint8_t d22[] = {TUD_AUDIO_DESC_STD_AS_ISO_EP(/*_ep*/ _ep_mic, /*_attr*/ (TUSB_XFER_ISOCHRONOUS | TUSB_ISO_EP_ATT_ASYNCHRONOUS | TUSB_ISO_EP_ATT_DATA), /*_maxEPsize*/ getMaxEPSize(), /*_interval*/ 0x01)};
+  append(buf, d22, sizeof(d22));
+
+  /* Class-Specific AS Isochronous Audio Data Endpoint Descriptor(4.10.1.2) */\
+  // TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, /*_lockdelay*/ 0x0000),
+  uint8_t d23[] = {TUD_AUDIO_DESC_CS_AS_ISO_EP(/*_attr*/ AUDIO_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK, /*_ctrl*/ AUDIO_CTRL_NONE, /*_lockdelayunit*/ AUDIO_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, /*_lockdelay*/ 0x0000)};
+  append(buf, d23, sizeof(d23));
+
 }
 
 
 bool Adafruit_USBD_Audio::clock_get_request(
-    uint8_t rhport, tusb_control_request_t const *p_request) {
+  uint8_t rhport, tusb_control_request_t const *p_request) {
   uint8_t channelNum = TU_U16_LOW(p_request->wValue);
   uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
   // uint8_t itf = TU_U16_LOW(p_request->wIndex); 			// Since
@@ -654,7 +781,7 @@ bool Adafruit_USBD_Audio::clock_set_request(
   // we have only one audio function implemented, we do not need the itf value
   uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
 
-  // TU_ASSERT(request->bEntityID == UAC2_ENTITY_SPK_CLOCK);
+  // TU_ASSERT(request->bEntityID == UAC2_ENTITY_CLOCK);
   TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
 
   if (ctrlSel == AUDIO_CS_CTRL_SAM_FREQ) {

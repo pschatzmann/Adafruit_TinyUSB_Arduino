@@ -30,7 +30,7 @@ void setup() {
   }
   
   Serial.begin(115200);
-  while(!Serial);  // wait for serial
+  //while(!Serial);  // wait for serial
 
   // Start USB device as Audio Sink
   usb.setWriteCallback(writeCB);

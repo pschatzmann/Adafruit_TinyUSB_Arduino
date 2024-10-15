@@ -62,17 +62,17 @@
 // Unit numbers are arbitrary selected
 //--------------------------------------------------------------------
 
+#define UAC2_ENTITY_CLOCK 0x10
+
 // Speaker path
 #define UAC2_ENTITY_SPK_INPUT_TERMINAL 0x15
 #define UAC2_ENTITY_SPK_FEATURE_UNIT 0x16
 #define UAC2_ENTITY_SPK_OUTPUT_TERMINAL 0x17
-#define UAC2_ENTITY_SPK_CLOCK 0x18
 
 // Microphone path
 #define UAC2_ENTITY_MIC_INPUT_TERMINAL 0x11
 #define UAC2_ENTITY_MIC_FEATURE_UNIT 0x12
 #define UAC2_ENTITY_MIC_OUTPUT_TERMINAL 0x13
-#define UAC2_ENTITY_MIC_CLOCK 0x14
 
 //--------------------------------------------------------------------
 // AUDIO CLASS DRIVER CONFIGURATION
@@ -83,7 +83,8 @@
 
 #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                 getUSBDAudioInterfaceDescriptorLength() 
 
-#define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                 1
+#define CFG_TUD_AUDIO_ENABLE_INTERRUPT_EP             1
+#define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                 2
 #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ              64
 
 // Microphone

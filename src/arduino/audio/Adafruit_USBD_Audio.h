@@ -136,12 +136,15 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     || (p_write_callback==defaultWriteCB && p_print!=nullptr);
   }
 
+  bool isHeadset() { return isSpeaker() && isMicrophone();}
+
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
   //--------------------------------------------------------------------+
   // from Adafruit_USBD_Interface
   virtual uint16_t getInterfaceDescriptor(uint8_t itfnum_deprecated,
                                           uint8_t *buf, uint16_t bufsize) override;
+
   virtual size_t getInterfaceDescriptorLength() {
     return getInterfaceDescriptor(0, nullptr, 0);
   }
@@ -150,8 +153,12 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     return TUD_AUDIO_EP_SIZE(CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE, _bits_per_sample / 8, _channels);
   }
 
-  virtual uint16_t get_io_size() {
+  virtual uint16_t getIOSize() {
     return TUD_AUDIO_EP_SIZE(_sample_rate, _bits_per_sample/8, _channels);
+  }
+
+  virtual uint8_t getFeatureUnitLength() {
+    return (6+(_channels+1)*4);
   }
 
   // Invoked when set interface is called, typically on start/stop streaming or
@@ -239,6 +246,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   uint8_t _ep_mic = 0;
   uint8_t _ep_spk = 0;
   uint8_t _ep_fb = 0;
+  uint8_t _ep_int = 0;
   bool _cdc_active = CDC_DEFAULT_ACTIVE;
 
   // input/output callbacks
@@ -262,7 +270,6 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
     _append_pos += len;
   }
 
-
   static size_t defaultWriteCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref){
     Print* p_print = ref.p_print;
     if (p_print) return p_print->write((const uint8_t*)data, len);
@@ -280,6 +287,11 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   virtual bool feature_unit_set_request(uint8_t rhport, tusb_control_request_t const *request, uint8_t const *buf);
   virtual bool clock_get_request(uint8_t rhport, tusb_control_request_t const *request);
   virtual bool clock_set_request(uint8_t rhport, tusb_control_request_t const *request, uint8_t const *buf);
+
+  virtual void interfaceDescriptorHeader(uint8_t *buf,uint8_t total_len, uint8_t category);
+  virtual void interfaceDescriptorMicrophone(uint8_t *buf, uint8_t total_len);
+  virtual void interfaceDescriptorSpeaker(uint8_t *buf, uint8_t total_len);
+  virtual void interfaceDescriptorHeadset(uint8_t *buf, uint8_t total_len);
 
 
 };
