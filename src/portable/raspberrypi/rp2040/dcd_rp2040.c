@@ -120,7 +120,7 @@ bool dcd_edpt_iso_alloc(uint8_t rhport, uint8_t ep_addr, uint16_t largest_packet
   assert(rhport == 0);
   struct hw_endpoint* ep = hw_endpoint_get_by_addr(ep_addr);
   // size must be multiple of 64
-  uint size = tu_div_ceil(largest_packet_size, 64) * 64u;
+  uint16_t size = (uint16_t)tu_div_ceil(largest_packet_size, 64) * 64u;
   ep->wMaxPacketSize = size;
   hw_endpoint_alloc(ep, size);
   return true;
@@ -132,7 +132,7 @@ bool dcd_edpt_iso_activate(uint8_t rhport, tusb_desc_endpoint_t const * ep_desc)
   assert(rhport == 0);
   const uint8_t ep_addr = ep_desc->bEndpointAddress;
   const uint16_t mps    = ep_desc->wMaxPacketSize;
-  uint size = tu_div_ceil(mps, 64) * 64u;
+  uint16_t size = (uint16_t)tu_div_ceil(mps, 64) * 64u;
 
   // init w/o allocate
   hw_endpoint_init(ep_addr, size, TUSB_XFER_ISOCHRONOUS);
@@ -171,7 +171,7 @@ static void hw_endpoint_close(uint8_t ep_addr) {
 // Legacy init called by dcd_init (which does allocation)
 static void hw_endpoint_init_and_alloc(uint8_t ep_addr, uint16_t wMaxPacketSize, uint8_t transfer_type) {
   struct hw_endpoint* ep = hw_endpoint_get_by_addr(ep_addr);
-  uint size = tu_div_ceil(wMaxPacketSize, 64) * 64u;
+  uint16_t size = (uint16_t) tu_div_ceil(wMaxPacketSize, 64) * 64u;
   // size must be multiple of 64
   hw_endpoint_init(ep_addr, size, transfer_type);
   const uint8_t num = tu_edpt_number(ep_addr);
