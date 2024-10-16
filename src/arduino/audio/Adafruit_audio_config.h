@@ -26,7 +26,7 @@
 #pragma once
 
 // for a start we support audio only on the Rasperry Pico
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_SAMD)
+//#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_SAMD)
 
 #define CFG_TUD_AUDIO             1
 
@@ -117,4 +117,4 @@
 // hack to make CFG_TUD_AUDIO_FUNC_1_DESC_LEN dynamic
 extern int getUSBDAudioInterfaceDescriptorLength();
 
-#endif // ARDUINO_ARCH_*
+//#endif // ARDUINO_ARCH_*

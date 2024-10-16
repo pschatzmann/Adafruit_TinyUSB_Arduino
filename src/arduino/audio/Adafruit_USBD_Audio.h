@@ -31,6 +31,9 @@
 #include "common/tusb_types.h"
 #include <vector>
 
+#if CFG_TUD_ENABLED && CFG_TUD_AUDIO
+
+
 // output using 5 debug pins
 #if AUDIO_DEBUG
 # define debugWrite(pin, active) digitalWrite(pin, active);
@@ -296,4 +299,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
 
 };
 
-#endif
+#endif // #if CFG_TUD_ENABLED && CFG_TUD_AUDIO
+
+#endif //ADAFRUIT_USBD_AUDIO_H_
+
