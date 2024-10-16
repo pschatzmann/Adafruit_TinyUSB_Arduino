@@ -137,6 +137,10 @@ extern "C" {
 #define CFG_TUH_CDC_LINE_CODING_ON_ENUM                                        \
   { 115200, CDC_LINE_CONDING_STOP_BITS_1, CDC_LINE_CODING_PARITY_NONE, 8 }
 
+#ifdef CFG_FORCE_DEFAULT_AUDIO_CONFIG
+#  warning Using default audio configuration
+#  include "arduino/audio/Adafruit_audio_config.h"
+#endif
 
 #ifdef __cplusplus
 }
