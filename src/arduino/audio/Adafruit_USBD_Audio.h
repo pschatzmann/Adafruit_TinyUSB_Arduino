@@ -250,6 +250,7 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   uint8_t _ep_spk = 0;
   uint8_t _ep_fb = 0;
   uint8_t _ep_int = 0;
+  uint8_t _stridx = 0;
   bool _cdc_active = CDC_DEFAULT_ACTIVE;
 
   // input/output callbacks
