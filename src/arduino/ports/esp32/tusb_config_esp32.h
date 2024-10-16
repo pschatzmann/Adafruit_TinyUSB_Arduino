@@ -137,6 +137,7 @@ extern "C" {
 #define CFG_TUH_CDC_LINE_CODING_ON_ENUM                                        \
   { 115200, CDC_LINE_CONDING_STOP_BITS_1, CDC_LINE_CODING_PARITY_NONE, 8 }
 
+
 #ifdef __cplusplus
 }
 #endif

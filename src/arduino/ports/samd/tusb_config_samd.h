@@ -84,7 +84,7 @@ extern "C" {
 #endif
 // audio support: potentially platform dependent
 #ifndef CFG_TUD_AUDIO
-#include "arduino/audio/Adafruit_audio_config.h"
+#define CFG_TUD_AUDIO 1
 #endif
 #ifndef CFG_TUD_VIDEO
 #define CFG_TUD_VIDEO 1 // number of video control interfaces
