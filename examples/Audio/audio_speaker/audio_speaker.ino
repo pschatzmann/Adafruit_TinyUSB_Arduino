@@ -4,11 +4,11 @@
  products from Adafruit!
 
  MIT license, check LICENSE for more information
- Copyright (c) 2024 Phil Schatzmann
+ Copyright (c) 2024 Phl Schatzmann
 
- This example receives Audio from your PC and you can visualize the
- audio data in the Arduino Serial Plotter
-
+ This example counts the 'received' samples and prints them on
+ Serial (via CDC)
+ 
 *********************************************************************/
 
 #include "Adafruit_TinyUSB.h"

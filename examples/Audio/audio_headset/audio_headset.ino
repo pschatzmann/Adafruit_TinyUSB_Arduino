@@ -1,9 +1,23 @@
+/*********************************************************************
+ Adafruit invests time and resources providing this open source code,
+ please support Adafruit and open-source hardware by purchasing
+ products from Adafruit!
+
+ MIT license, check LICENSE for more information
+ Copyright (c) 2024 Phl Schatzmann
+
+ A combination of a microphone and headset at the same time.
+ Unfortunately it will only work when Serial output is not active
+
+*********************************************************************/
+
 #include "Adafruit_TinyUSB.h"
 
 Adafruit_USBD_Audio usb;
 size_t sample_count_mic = 0;
 size_t sample_count_spk = 0;
 
+// Microphone: generate data for USB
 size_t readCB(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
   int16_t* data16 = (int16_t*)data;
   size_t samples = len / sizeof(int16_t);
@@ -18,6 +32,7 @@ size_t readCB(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
   return result;
 }
 
+// Speaker: receive data from USB and write them to the final destination
 size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
   int16_t* data16 = (int16_t*)data;
   size_t samples = len / sizeof(int16_t);
@@ -26,13 +41,13 @@ size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
 }
 
 void setup() {
+  usb.setCDCActive(false);
   // Manual begin() is required on core without built-in support e.g. mbed rp2040
   if (!TinyUSBDevice.isInitialized()) {
     TinyUSBDevice.begin(0);
   }
 
-  Serial.begin(115200);
-  //while(!Serial);  // wait for serial
+  //Serial.begin(115200);
 
   // Start USB device as both Audio Source and Sink
   usb.setReadCallback(readCB);
@@ -45,7 +60,6 @@ void setup() {
     delay(10);
     TinyUSBDevice.attach();
   }
-
 }
 
 void loop() {
@@ -54,12 +68,12 @@ void loop() {
   TinyUSBDevice.task();
   #endif
   // use LED do display status
-  if (usb.updateLED()){
-    Serial.print("Total Microphone samples: ");
-    Serial.print(sample_count_mic);
-    Serial.print(" / Speaker samples: ");
-    Serial.print(sample_count_spk);
-    Serial.print(" / Sample rate: ");
-    Serial.println(usb.rate());
-  }
+  // if (usb.updateLED()){
+  //   Serial.print("Total Microphone samples: ");
+  //   Serial.print(sample_count_mic);
+  //   Serial.print(" / Speaker samples: ");
+  //   Serial.print(sample_count_spk);
+  //   Serial.print(" / Sample rate: ");
+  //   Serial.println(usb.rate());
+  // }
 }
