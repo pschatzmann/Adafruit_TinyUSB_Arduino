@@ -41,14 +41,12 @@ size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
 }
 
 void setup() {
-  Serial.end();
-  
-  // Manual begin() is required on core without built-in support e.g. mbed rp2040
+    // Manual begin() is required on core without built-in support e.g. mbed rp2040
   if (!TinyUSBDevice.isInitialized()) {
     TinyUSBDevice.begin(0);
   }
 
-  //Serial.begin(115200);
+  Serial.begin(115200);
 
   // Start USB device as both Audio Source and Sink
   usb.setReadCallback(readCB);
@@ -69,12 +67,12 @@ void loop() {
   TinyUSBDevice.task();
   #endif
   // use LED do display status
-  // if (usb.updateLED()){
-  //   Serial.print("Total Microphone samples: ");
-  //   Serial.print(sample_count_mic);
-  //   Serial.print(" / Speaker samples: ");
-  //   Serial.print(sample_count_spk);
-  //   Serial.print(" / Sample rate: ");
-  //   Serial.println(usb.rate());
-  // }
+  if (usb.updateLED()){
+    Serial.print("Total Microphone samples: ");
+    Serial.print(sample_count_mic);
+    Serial.print(" / Speaker samples: ");
+    Serial.print(sample_count_spk);
+    Serial.print(" / Sample rate: ");
+    Serial.println(usb.rate());
+  }
 }

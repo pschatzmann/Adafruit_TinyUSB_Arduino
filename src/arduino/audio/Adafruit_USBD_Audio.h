@@ -220,27 +220,28 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   virtual void feedback_params_cb(uint8_t func_id, uint8_t alt_itf, audio_feedback_params_t* feedback_param);
 #endif
 
+  // for the headset with cdc the buffer is too small
+  void setConfigurationBufferSize(uint16_t size){
+    _config_buffer_size = size;
+  }
 
  protected:
   int _rh_port = 0;
   uint8_t _channels = 0;
+  bool _cdc_active = CDC_DEFAULT_ACTIVE;
   bool _is_led_setup = true;
   AudioProcessingStatus _processing_status = AudioProcessingStatus::INACTIVE;
-
-  // Audio controls
   bool _mute[AUDIO_USB_MAX_CHANNELS+1] = {false};    // +1 for master channel 0
   uint16_t _volume[AUDIO_USB_MAX_CHANNELS+1] = {100};  // +1 for master channel 0
-  // Current states
   uint32_t _sample_rate;
   uint8_t _bits_per_sample;
   uint8_t _clk_is_valid = true;
-
-  // Audio test data
+  uint16_t _config_buffer_size = 0;
+  std::vector<uint8_t> _config_buffer;
   std::vector<uint8_t> _in_buffer;
   std::vector<uint8_t> _out_buffer;
   uint16_t _out_buffer_available = 0;
   uint16_t _in_buffer_available = 0;
-
   bool _led_active = false;
   uint64_t _led_timeout = 0;
 
@@ -255,15 +256,14 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   uint8_t _ep_fb = 0;
   uint8_t _ep_int = 0;
   uint8_t _stridx = 0;
-  bool _cdc_active = CDC_DEFAULT_ACTIVE;
+  int _append_pos = 0;
+  int _desc_len = 0;
 
   // input/output callbacks
   size_t (*p_write_callback)(const uint8_t* data,size_t len, Adafruit_USBD_Audio& ref);
   size_t (*p_read_callback)(uint8_t* data, size_t len, Adafruit_USBD_Audio& ref);
   Stream *p_stream = nullptr;
   Print *p_print = nullptr;
-  int _append_pos = 0;
-  int _desc_len = 0;
 
   /// Define the led delay
   void setStatus(AudioProcessingStatus status) {

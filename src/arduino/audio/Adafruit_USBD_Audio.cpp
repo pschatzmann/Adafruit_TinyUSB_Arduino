@@ -59,6 +59,17 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
     return false;
   }
 
+  // headset & cdc requires a bigger config buffer
+  if (isHeadset()){
+    _config_buffer_size = 512;
+  }
+
+  // setup config buffer
+  if (_config_buffer_size > 256){
+    _config_buffer.resize(_config_buffer_size);
+    TinyUSBDevice.setConfigurationBuffer(&(_config_buffer[0]), _config_buffer_size);
+  }
+
   // init device stack on configured roothub port
   // Init values
   this->_sample_rate = rate;
@@ -71,12 +82,14 @@ bool Adafruit_USBD_Audio::begin(unsigned long rate, int channels,
 
   // calculate descriptor length;
   if (interfaceDescriptor(nullptr, 1024) == 0){
+    setStatus(AudioProcessingStatus::ERROR);
     LOG_AUDIO_ERROR("Interface Descriptor length was 0");
     return false;
   }
 
   // add the interface
   if (!TinyUSBDevice.addInterface(*this)){
+    setStatus(AudioProcessingStatus::ERROR);
     LOG_AUDIO_ERROR("addInterface failed");
     return false;
   }
@@ -460,20 +473,17 @@ uint16_t Adafruit_USBD_Audio::interfaceDescriptor(uint8_t *buf, uint16_t bufsize
     _ep_int = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN); // input 
     _ep_spk = TinyUSBDevice.allocEndpoint(TUSB_DIR_OUT); // output
     _itf_number_total += 2;
-    //_stridx = 4; 
   } else  if (isMicrophone() && _desc_len==0) {
      total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     _itfnum_mic = TinyUSBDevice.allocInterface();
     _ep_mic = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN);
     _itf_number_total++;
-    //_stridx = 4; 
   } else if (isSpeaker() && _desc_len==0) {
      total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
     _ep_spk = TinyUSBDevice.allocEndpoint(TUSB_DIR_OUT);
     _ep_fb = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN);
     _itf_number_total++;
-    //_stridx = 4; 
   }
 
   // generate descriptor
