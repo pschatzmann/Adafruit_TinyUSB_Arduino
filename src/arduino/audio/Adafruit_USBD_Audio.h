@@ -54,8 +54,10 @@ enum class AudioProcessingStatus { INACTIVE=0, ERROR=500, PLAYING=1000,ACTIVE=20
  * - provide data access via callbacks
  * - configure audio info via begin method
  * - provide all potential methods so that we can easily overwrite them
- * - implement audio sink
- * - implement audio source
+ * - implement Speaker (device is audio sink)
+ * - implement Microphone (device is audio source)
+ * - dont change the audio based on mute or volume changes: this is the respondibility
+ *   of the implementor
  */
 
 class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
@@ -140,6 +142,8 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   }
 
   bool isHeadset() { return isSpeaker() && isMicrophone();}
+
+  Adafruit_USBD_Device device() { return TinyUSBDevice; }
 
   //--------------------------------------------------------------------+
   // Application Callback API Implementations
@@ -292,6 +296,8 @@ class Adafruit_USBD_Audio : public Adafruit_USBD_Interface {
   virtual bool clock_get_request(uint8_t rhport, tusb_control_request_t const *request);
   virtual bool clock_set_request(uint8_t rhport, tusb_control_request_t const *request, uint8_t const *buf);
 
+// build interface descriptor
+  virtual uint16_t interfaceDescriptor(uint8_t *buf, uint16_t bufsize);
   virtual void interfaceDescriptorHeader(uint8_t *buf,uint8_t total_len, uint8_t category);
   virtual void interfaceDescriptorMicrophone(uint8_t *buf, uint8_t total_len);
   virtual void interfaceDescriptorSpeaker(uint8_t *buf, uint8_t total_len);

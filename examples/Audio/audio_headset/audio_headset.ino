@@ -41,7 +41,8 @@ size_t writeCB(const uint8_t* data, size_t len, Adafruit_USBD_Audio& ref) {
 }
 
 void setup() {
-  usb.setCDCActive(false);
+  Serial.end();
+  
   // Manual begin() is required on core without built-in support e.g. mbed rp2040
   if (!TinyUSBDevice.isInitialized()) {
     TinyUSBDevice.begin(0);
