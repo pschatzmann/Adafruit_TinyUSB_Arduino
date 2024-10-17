@@ -453,7 +453,6 @@ uint16_t Adafruit_USBD_Audio::getInterfaceDescriptor(uint8_t itfnum_deprecated,
 uint16_t Adafruit_USBD_Audio::interfaceDescriptor(uint8_t *buf, uint16_t bufsize) {
 
   // Generate the descriptor and calculate it's length
-  uint8_t total_len = 0;
   uint8_t feature_unit_len = getFeatureUnitLength();
   _append_pos = 0;
 
@@ -466,7 +465,6 @@ uint16_t Adafruit_USBD_Audio::interfaceDescriptor(uint8_t *buf, uint16_t bufsize
 
   // Setup endpints and interfaces
   if (isHeadset() && _desc_len==0) {
-     total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len + (2 * (TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN));
     _itfnum_mic = TinyUSBDevice.allocInterface(); // input interface
     _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
     _ep_mic = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN); // intput
@@ -474,12 +472,10 @@ uint16_t Adafruit_USBD_Audio::interfaceDescriptor(uint8_t *buf, uint16_t bufsize
     _ep_spk = TinyUSBDevice.allocEndpoint(TUSB_DIR_OUT); // output
     _itf_number_total += 2;
   } else  if (isMicrophone() && _desc_len==0) {
-     total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     _itfnum_mic = TinyUSBDevice.allocInterface();
     _ep_mic = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN);
     _itf_number_total++;
   } else if (isSpeaker() && _desc_len==0) {
-     total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     _itfnum_spk = TinyUSBDevice.allocInterface(); // output interface
     _ep_spk = TinyUSBDevice.allocEndpoint(TUSB_DIR_OUT);
     _ep_fb = TinyUSBDevice.allocEndpoint(TUSB_DIR_IN);
@@ -488,10 +484,13 @@ uint16_t Adafruit_USBD_Audio::interfaceDescriptor(uint8_t *buf, uint16_t bufsize
 
   // generate descriptor
   if (isHeadset()){
+    uint8_t total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len + (2 * (TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN));
     interfaceDescriptorHeadset(buf, total_len);
   } else if (isMicrophone()){
+    uint8_t total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     interfaceDescriptorMicrophone(buf, total_len);
   } else if (isSpeaker()){
+    uint8_t total_len = TUD_AUDIO_DESC_CLK_SRC_LEN + feature_unit_len+TUD_AUDIO_DESC_INPUT_TERM_LEN+TUD_AUDIO_DESC_OUTPUT_TERM_LEN;
     interfaceDescriptorSpeaker(buf, total_len);
   }
 
