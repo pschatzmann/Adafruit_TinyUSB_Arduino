@@ -98,6 +98,11 @@ extern "C" {
 #define CFG_TUD_VENDOR 1
 #endif
 
+// audio support: potentially platform dependent
+#ifndef CFG_TUD_AUDIO
+#define CFG_TUD_AUDIO 1
+#endif
+
 #ifndef CFG_TUD_VIDEO
 #define CFG_TUD_VIDEO 0 // number of video control interfaces
 #endif

@@ -266,7 +266,7 @@ static struct hw_endpoint *_next_free_interrupt_ep(void)
     ep = &ep_pool[i];
     if ( !ep->configured )
     {
-      // Will be configured by _hw_endpoint_init / _hw_endpoint_allocate
+      // Will be configured by _hw_endpoint_init / hw_endpoint_allocate
       ep->interrupt_num = (uint8_t) (i - 1);
       return ep;
     }
@@ -274,7 +274,7 @@ static struct hw_endpoint *_next_free_interrupt_ep(void)
   return ep;
 }
 
-static struct hw_endpoint *_hw_endpoint_allocate(uint8_t transfer_type)
+static struct hw_endpoint *hw_endpoint_allocate(uint8_t transfer_type)
 {
   struct hw_endpoint * ep = NULL;
 
@@ -304,7 +304,7 @@ static struct hw_endpoint *_hw_endpoint_allocate(uint8_t transfer_type)
   return ep;
 }
 
-static void _hw_endpoint_init(struct hw_endpoint *ep, uint8_t dev_addr, uint8_t ep_addr, uint16_t wMaxPacketSize, uint8_t transfer_type, uint8_t bmInterval)
+static void _hw_endpoint_init_and_alloc(struct hw_endpoint *ep, uint8_t dev_addr, uint8_t ep_addr, uint16_t wMaxPacketSize, uint8_t transfer_type, uint8_t bmInterval)
 {
   // Already has data buffer, endpoint control, and buffer control allocated at this point
   assert(ep->endpoint_control);
@@ -517,10 +517,10 @@ bool hcd_edpt_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_endpoint_t const 
   pico_trace("hcd_edpt_open dev_addr %d, ep_addr %d\n", dev_addr, ep_desc->bEndpointAddress);
 
   // Allocated differently based on if it's an interrupt endpoint or not
-  struct hw_endpoint *ep = _hw_endpoint_allocate(ep_desc->bmAttributes.xfer);
+  struct hw_endpoint *ep = hw_endpoint_allocate(ep_desc->bmAttributes.xfer);
   TU_ASSERT(ep);
 
-  _hw_endpoint_init(ep,
+  _hw_endpoint_init_and_alloc(ep,
                     dev_addr,
                     ep_desc->bEndpointAddress,
                     tu_edpt_packet_size(ep_desc),
@@ -553,7 +553,7 @@ bool hcd_edpt_xfer(uint8_t rhport, uint8_t dev_addr, uint8_t ep_addr, uint8_t * 
     assert(ep_num == 0);
 
     // Direction has flipped on endpoint control so re init it but with same properties
-    _hw_endpoint_init(ep, dev_addr, ep_addr, ep->wMaxPacketSize, ep->transfer_type, 0);
+    _hw_endpoint_init_and_alloc(ep, dev_addr, ep_addr, ep->wMaxPacketSize, ep->transfer_type, 0);
   }
 
   // If a normal transfer (non-interrupt) then initiate using
@@ -603,14 +603,14 @@ bool hcd_setup_send(uint8_t rhport, uint8_t dev_addr, uint8_t const setup_packet
   }
 
   // Configure EP0 struct with setup info for the trans complete
-  struct hw_endpoint * ep = _hw_endpoint_allocate(0);
+  struct hw_endpoint * ep = hw_endpoint_allocate(0);
   TU_ASSERT(ep);
 
   // EPX should be inactive
   assert(!ep->active);
 
   // EP0 out
-  _hw_endpoint_init(ep, dev_addr, 0x00, ep->wMaxPacketSize, 0, 0);
+  _hw_endpoint_init_and_alloc(ep, dev_addr, 0x00, ep->wMaxPacketSize, 0, 0);
   assert(ep->configured);
 
   ep->remaining_len = 8;

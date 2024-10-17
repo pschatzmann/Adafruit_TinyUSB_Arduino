@@ -62,6 +62,10 @@
 #define CFG_TUSB_DEBUG_PRINTF log_printf
 #endif
 
+#if CFG_TUD_AUDIO
+#include "arduino/audio/Adafruit_audio_config.h"
+#endif
+
 #ifdef __cplusplus
  }
 #endif

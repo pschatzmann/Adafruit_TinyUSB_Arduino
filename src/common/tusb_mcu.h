@@ -356,7 +356,7 @@
 //--------------------------------------------------------------------+
 #elif TU_CHECK_MCU(OPT_MCU_RP2040)
   #define TUP_DCD_ENDPOINT_MAX    16
-
+  #define TUP_DCD_EDPT_ISO_ALLOC
   #define TU_ATTR_FAST_FUNC       __attribute__((section(".time_critical.tinyusb")))
 
 //--------------------------------------------------------------------+
