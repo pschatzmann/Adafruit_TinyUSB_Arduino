@@ -53,6 +53,8 @@
 
 #elif defined(ARDUINO_ARCH_CH32) || defined(CH32V20x) || defined(CH32V30x)
   #include "arduino/ports/ch32/tusb_config_ch32.h"
+#elif defined(STM32H7xx)
+  #include "arduino/ports/stm32/tusb_config_stm32.h"
 #else
   #error TinyUSB Arduino Library does not support your core yet
 #endif
