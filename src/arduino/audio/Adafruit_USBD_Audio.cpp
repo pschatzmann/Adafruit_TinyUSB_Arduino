@@ -787,12 +787,15 @@ bool Adafruit_USBD_Audio::clock_get_request(
               rhport, p_request, &_sample_rate, sizeof(_sample_rate));
 
         case AUDIO_CS_REQ_RANGE:
-          LOG_AUDIO_DEBUG("    Get Sample Freq. range -> %d - %d",_sample_rate,_sample_rate);
-          audio_control_range_4_n_t(1) sampleFreqRng;
+          LOG_AUDIO_DEBUG("    Get Sample Freq. range -> %d - %d",AUDIO_FREQ_MIN,AUDIO_FREQ_MAX);
+          audio_control_range_4_n_t(2) sampleFreqRng;
           sampleFreqRng.wNumSubRanges = 1;
           sampleFreqRng.subrange[0].bMin = _sample_rate;
           sampleFreqRng.subrange[0].bMax = _sample_rate;
           sampleFreqRng.subrange[0].bRes = 0;
+          sampleFreqRng.subrange[1].bMin = AUDIO_FREQ_MIN;
+          sampleFreqRng.subrange[1].bMax = AUDIO_FREQ_MAX;
+          sampleFreqRng.subrange[1].bRes = 0;
           return tud_control_xfer(rhport, p_request, &sampleFreqRng,
                                   sizeof(sampleFreqRng));
 
@@ -828,7 +831,7 @@ bool Adafruit_USBD_Audio::clock_set_request(
   uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
 
   // TU_ASSERT(request->bEntityID == UAC2_ENTITY_CLOCK);
-  TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
+  //TU_VERIFY(p_request->bRequest == AUDIO_CS_REQ_CUR);
 
   if (ctrlSel == AUDIO_CS_CTRL_SAM_FREQ) {
     TU_VERIFY(p_request->wLength == sizeof(audio_control_cur_4_t));
