@@ -78,9 +78,7 @@
 
 // Have a look into audio_device.h for all configurations
 #define CFG_TUD_AUDIO_FUNC_1_SAMPLE_RATE              (AUDIO_FREQ_MAX*2)
-
-#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN                 getUSBDAudioInterfaceDescriptorLength() 
-
+#define CFG_TUD_AUDIO_FUNC_1_DESC_LEN_API             1 
 #define CFG_TUD_AUDIO_ENABLE_INTERRUPT_EP             1
 #define CFG_TUD_AUDIO_FUNC_1_N_AS_INT                 2
 #define CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ              64

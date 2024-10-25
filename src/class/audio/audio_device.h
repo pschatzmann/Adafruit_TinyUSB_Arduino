@@ -34,6 +34,19 @@
 //--------------------------------------------------------------------+
 // Class Driver Configuration
 //--------------------------------------------------------------------+
+// dynamically determine the descriptor length by API
+uint16_t tinyusb_audio_descriptor_length(unsigned char	funcN);
+
+#ifdef CFG_TUD_AUDIO_FUNC_1_DESC_LEN_API
+#  define CFG_TUD_AUDIO_FUNC_1_DESC_LEN tinyusb_audio_descriptor_length(1)
+#endif
+#ifdef CFG_TUD_AUDIO_FUNC_2_DESC_LEN_API
+#  define CFG_TUD_AUDIO_FUNC_2_DESC_LEN tinyusb_audio_descriptor_length(2)
+#endif
+#ifdef CFG_TUD_AUDIO_FUNC_3_DESC_LEN_API
+#  define CFG_TUD_AUDIO_FUNC_3_DESC_LEN tinyusb_audio_descriptor_length(3)
+#endif
+
 
 // All sizes are in bytes!
 
@@ -41,9 +54,14 @@
 #error You must tell the driver the length of the audio function descriptor including IAD descriptor
 #endif
 #if CFG_TUD_AUDIO > 1
-#ifndef CFG_TUD_AUDIO_FUNC_2_DESC_LEN
-#error You must tell the driver the length of the audio function descriptor including IAD descriptor
-#endif
+#  ifndef CFG_TUD_AUDIO_FUNC_2_DESC_LEN
+#    error You must tell the driver the length of the audio function descriptor including IAD descriptor
+#  endif
+// determine descriptor length dynamically
+#  if CFG_TUD_AUDIO_FUNC_1_DESC_LEN == 0
+#    undef CFG_TUD_AUDIO_FUNC_1_DESC_LEN
+#    #define CFG_TUD_AUDIO_FUNC_1_DESC_LEN tinyusb_audio_descriptor_length(1)
+#  endif
 #endif
 #if CFG_TUD_AUDIO > 2
 #ifndef CFG_TUD_AUDIO_FUNC_3_DESC_LEN
@@ -447,6 +465,7 @@ static inline bool tud_audio_int_write                      (const audio_interru
 // available you may directly use 'tud_control_xfer(...)'. In this case data does not need to be copied into an additional buffer and you save some time.
 // If the request's wLength is zero, a status packet is sent instead.
 bool tud_audio_buffer_and_schedule_control_xfer(uint8_t rhport, tusb_control_request_t const * p_request, void* data, uint16_t len);
+
 
 //--------------------------------------------------------------------+
 // Application Callback API
