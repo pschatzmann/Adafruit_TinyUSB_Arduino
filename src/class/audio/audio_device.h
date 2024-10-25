@@ -35,7 +35,7 @@
 // Class Driver Configuration
 //--------------------------------------------------------------------+
 // dynamically determine the descriptor length by API
-uint16_t tinyusb_audio_descriptor_length(unsigned char	funcN);
+int tinyusb_audio_descriptor_length(unsigned char	funcN);
 
 #ifdef CFG_TUD_AUDIO_FUNC_1_DESC_LEN_API
 #  define CFG_TUD_AUDIO_FUNC_1_DESC_LEN tinyusb_audio_descriptor_length(1)

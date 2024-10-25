@@ -1049,7 +1049,7 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport,
   return self_Adafruit_USBD_Audio->set_itf_close_EP_cb(rhport, p_request);
 }
 
-uint16_t tinyusb_audio_descriptor_length(uint8_t func) {
+int tinyusb_audio_descriptor_length(uint8_t func) {
   if (self_Adafruit_USBD_Audio==nullptr) return 0;
   return self_Adafruit_USBD_Audio->getInterfaceDescriptorLength();
 }
