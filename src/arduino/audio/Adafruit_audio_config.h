@@ -111,6 +111,6 @@
 // Definitions
 //--------------------------------------------------------------------
 // hack to make CFG_TUD_AUDIO_FUNC_1_DESC_LEN dynamic
-extern int getUSBDAudioInterfaceDescriptorLength();
+extern int tinyusb_audio_descriptor_length();
 
 #endif // CFG_TUD_AUDIO*
