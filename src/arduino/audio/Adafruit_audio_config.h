@@ -111,6 +111,6 @@
 // Definitions
 //--------------------------------------------------------------------
 // hack to make CFG_TUD_AUDIO_FUNC_1_DESC_LEN dynamic
-extern int tinyusb_audio_descriptor_length();
+uint16_t tinyusb_audio_descriptor_length(unsigned char  funcN);
 
 #endif // CFG_TUD_AUDIO*
