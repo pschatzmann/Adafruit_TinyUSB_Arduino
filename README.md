@@ -16,6 +16,7 @@ Supported device class drivers are:
 - Mass Storage Class (MSC): with multiple LUNs
 - Musical Instrument Digital Interface (MIDI)
 - Video (UVC): work in progress
+- Audio (UAC): work in progress
 - WebUSB with vendor specific class
 
 ### Host Stack
