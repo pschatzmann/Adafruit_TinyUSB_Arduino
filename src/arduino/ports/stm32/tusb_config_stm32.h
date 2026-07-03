@@ -29,7 +29,15 @@
 // COMMON CONFIGURATION
 //--------------------------------------------------------------------
 // MCU / OS
+#if defined(STM32H7xx)
+#define CFG_TUSB_MCU OPT_MCU_STM32H7
+#elif defined(STM32F7xx)
+#define CFG_TUSB_MCU OPT_MCU_STM32F7
+#elif defined(STM32F4xx)
 #define CFG_TUSB_MCU OPT_MCU_STM32F4
+#else
+#error "This TinyUSB port only supports the STM32F4, STM32F7 and STM32H7 families"
+#endif
 #define CFG_TUSB_OS OPT_OS_NONE
 
 // Debug
@@ -66,6 +74,9 @@
 #define CFG_TUD_VENDOR_TX_BUFSIZE (TUD_OPT_HIGH_SPEED ? 512 : 64)
 
 // Serial Redirect
+#ifdef Serial
+#undef Serial
+#endif
 #define Serial SerialTinyUSB
 
 //--------------------------------------------------------------------
