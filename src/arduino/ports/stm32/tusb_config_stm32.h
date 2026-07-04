@@ -31,12 +31,16 @@
 // MCU / OS
 #if defined(STM32H7xx)
 #define CFG_TUSB_MCU OPT_MCU_STM32H7
+#elif defined(STM32WBAxx)
+#define CFG_TUSB_MCU OPT_MCU_STM32WBA
 #elif defined(STM32F7xx)
 #define CFG_TUSB_MCU OPT_MCU_STM32F7
 #elif defined(STM32F4xx)
 #define CFG_TUSB_MCU OPT_MCU_STM32F4
+#elif defined(STM32WBxx)
+#define CFG_TUSB_MCU OPT_MCU_STM32WB
 #else
-#error "This TinyUSB port only supports the STM32F4, STM32F7 and STM32H7 families"
+#error "This TinyUSB port only supports the STM32F4, STM32F7, STM32H7, STM32WB and STM32WBA families"
 #endif
 #define CFG_TUSB_OS OPT_OS_NONE
 

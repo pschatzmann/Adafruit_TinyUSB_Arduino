@@ -37,17 +37,32 @@
 #if defined(STM32H7xx)
 #include "stm32h7xx_hal.h"
 #include "stm32h7xx_hal_rcc.h"
+#elif defined(STM32WBAxx)
+#include "stm32wbaxx_hal.h"
+#include "stm32wbaxx_hal_rcc.h"
 #elif defined(STM32F7xx)
 #include "stm32f7xx_hal.h"
 #include "stm32f7xx_hal_rcc.h"
 #elif defined(STM32F4xx)
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_rcc.h"
+#elif defined(STM32WBxx)
+#include "stm32wbxx_hal.h"
+#include "stm32wbxx_hal_rcc.h"
 #else
-#error "This TinyUSB port only supports the STM32F4, STM32F7 and STM32H7 families"
+#error "This TinyUSB port only supports the STM32F4, STM32F7, STM32H7, STM32WB and STM32WBA families"
 #endif
 
 #include "tusb.h"
+
+// STM32WB (classic, e.g. WB55) is the odd one out here: it has no OTG_FS/HS
+// peripheral at all, only ST's older "FSDEV" full-speed device controller
+// (the same IP block used by F0/F1/F3/G0/G4/L0/L1/L4/L5). That means a
+// completely different bring-up (no GPIO AF needed on DM/DP, two separate
+// interrupt vectors instead of one, its own clock-enable/voltage-domain
+// calls) - handled in its own branch below rather than trying to fold it
+// into the OTG_FS-style macros used by every other supported family.
+#if !defined(STM32WBxx) || defined(STM32WBAxx)
 
 // Most STM32 device-mode USB is a single "OTG_FS" peripheral on PA11/PA12
 // (AF10). Some STM32H7 parts (e.g. H723/H730/H733/H735/H7A3/H7B0/H7B3) don't
@@ -55,7 +70,11 @@
 // same PA11/PA12 pins via its internal full-speed-only transceiver. The AF
 // name, clock-enable macro and even the interrupt vector name differ in that
 // case (confirmed against the CMSIS startup files: those parts only have an
-// "OTG_HS_IRQHandler" vector, no "OTG_FS_IRQHandler" at all).
+// "OTG_HS_IRQHandler" vector, no "OTG_FS_IRQHandler" at all). STM32WBA
+// (the newer, bigger WBA6x chips - smaller WBA5x parts have no USB at all)
+// is the same situation again, but with yet another IRQ/AF naming scheme
+// ("USB_OTG_HS_IRQn"/"GPIO_AF10_USB_OTG_HS" instead of "OTG_HS_IRQn"/
+// "GPIO_AF10_OTG1_FS").
 #if defined(STM32H7xx) && !defined(USB2_OTG_FS)
 #define TUSB_STM32_FS_IRQn OTG_HS_IRQn
 #define TUSB_STM32_FS_IRQHandler OTG_HS_IRQHandler
@@ -66,6 +85,11 @@
 #define TUSB_STM32_FS_IRQHandler OTG_FS_IRQHandler
 #define TUSB_STM32_FS_AF GPIO_AF10_OTG2_FS
 #define TUSB_STM32_FS_CLK_ENABLE() __HAL_RCC_USB2_OTG_FS_CLK_ENABLE()
+#elif defined(STM32WBAxx)
+#define TUSB_STM32_FS_IRQn USB_OTG_HS_IRQn
+#define TUSB_STM32_FS_IRQHandler USB_OTG_HS_IRQHandler
+#define TUSB_STM32_FS_AF GPIO_AF10_USB_OTG_HS
+#define TUSB_STM32_FS_CLK_ENABLE() __HAL_RCC_USB_OTG_HS_CLK_ENABLE()
 #else
 #define TUSB_STM32_FS_IRQn OTG_FS_IRQn
 #define TUSB_STM32_FS_IRQHandler OTG_FS_IRQHandler
@@ -73,12 +97,21 @@
 #define TUSB_STM32_FS_CLK_ENABLE() __HAL_RCC_USB_OTG_FS_CLK_ENABLE()
 #endif
 
+#endif // !STM32WBxx || STM32WBAxx
+
 //--------------------------------------------------------------------+
 // Forward USB interrupt events to TinyUSB IRQ Handler
 //--------------------------------------------------------------------+
 extern "C" {
 
+#if defined(STM32WBxx) && !defined(STM32WBAxx)
+// WB55's FSDEV controller splits device events across two NVIC vectors
+// instead of OTG_FS/HS's single one.
+void USB_HP_IRQHandler(void) { tud_int_handler(0); }
+void USB_LP_IRQHandler(void) { tud_int_handler(0); }
+#else
 void TUSB_STM32_FS_IRQHandler(void) { tud_int_handler(0); }
+#endif
 
 void yield(void) {
   tud_task();
@@ -181,6 +214,21 @@ void serialEventRun(void) {
 void TinyUSB_Port_InitDevice(uint8_t rhport) {
   (void)rhport;
 
+#if defined(STM32WBxx) && !defined(STM32WBAxx)
+  // WB55: FSDEV controller. DM/DP (PA11/PA12) are dedicated pins that the
+  // peripheral takes over automatically once enabled - no GPIO AF setup is
+  // required (ST's own reference bring-up configures them as plain
+  // GPIO_MODE_INPUT and calls that "optional, for guidance only"). Like H7,
+  // the USB PHY here is on its own voltage domain (VDDUSB) that must be
+  // powered up explicitly.
+  HAL_PWREx_EnableVddUSB();
+  __HAL_RCC_USB_CLK_ENABLE();
+
+  NVIC_SetPriority(USB_HP_IRQn, 0);
+  NVIC_EnableIRQ(USB_HP_IRQn);
+  NVIC_SetPriority(USB_LP_IRQn, 0);
+  NVIC_EnableIRQ(USB_LP_IRQn);
+#else
   // Enable clocks FIRST
   __HAL_RCC_GPIOA_CLK_ENABLE();
   TUSB_STM32_FS_CLK_ENABLE();
@@ -208,6 +256,7 @@ void TinyUSB_Port_InitDevice(uint8_t rhport) {
   // TinyUSB's own dwc2 driver (see dwc2_stm32_gccfg_cfg()) as part of
   // tusb_init() below, since the GCCFG bit layout differs across STM32
   // families (e.g. F4 vs F7).
+#endif
 
   // Initialize TinyUSB device stack
   const tusb_rhport_init_t rh_init = {
