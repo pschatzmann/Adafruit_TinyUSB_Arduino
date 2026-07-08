@@ -50,7 +50,8 @@
 #include "stm32wbxx_hal.h"
 #include "stm32wbxx_hal_rcc.h"
 #else
-//#warning "This TinyUSB port only supports the STM32F4, STM32F7, STM32H7, STM32WB and STM32WBA families"
+// #warning "This TinyUSB port only supports the STM32F4, STM32F7, STM32H7,
+// STM32WB and STM32WBA families"
 #endif
 
 #include "tusb.h"
